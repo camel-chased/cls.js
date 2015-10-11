@@ -113,8 +113,8 @@ var instance_1 = new clsCon();
 var instance_2 = new clsCon();
 console.log( instance_1.someMethod === instance_2.someMethod ); //false
 ```
-`instance_1.someMethod` and `instance_2.someMethod` is the same method (same reference of method)
-but they are wrapped up by bounding functions so they no longer equal
-in the end they are point to same fn
-so someMethod is only once declared in memory but bounding function is declared twice here
-this is ok because bounding function is very small and do not eat a lot of memory 
+`instance_1.someMethod` and `instance_2.someMethod` is the same method (same reference of method)  
+but they are wrapped up by bounding functions so they no longer equal  
+in the end they are point to same fn  
+so someMethod is only once declared in memory but bounding function is declared twice here  
+this is ok because bounding function is very small and do not eat a lot of memory  
