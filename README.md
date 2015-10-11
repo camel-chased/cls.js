@@ -123,5 +123,6 @@ this is ok because bounding function is very small and do not eat a lot of memor
 
 ### to do
 * checking return types
+* static declarations
 * accessing protected variables through other instances of the same class
 * make better documentation
