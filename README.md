@@ -3,8 +3,8 @@ javascript classes with protected, private, public, static declarations, with ru
 This module can be used in node.js or in the browser.  
 No dependency needed.  
 
-this module doesn't have some features yet (see todo's at the bottom of this page)
-
+this module doesn't have some features yet (see todo's at the bottom of this page)  
+If you want to speed up clsjs developement just give it a star!  
 
 ### less lines of code with more secure application
 You don't need to checkout type of your arguments in every function with clsjs.  
@@ -13,8 +13,8 @@ So many lines of code are not necessary now.
 You don't need type checking and declaring default values in each function (it can be frustrating sometimes).  
 Furthermore you will be able to generate documentation from your classes automaticly - clsjs will do it for you.  
 In the future it will also have basic tests out of the box, so when you write some class, basic test will be waiting to launch.  
-clsjs don't need to be compiled to javascript - it is pure javascript.
-If you want to speed up clsjs developement just give it a star!
+clsjs don't need to be compiled to javascript - it is pure javascript.  
+
 ```js
 var MyClass = cls('MyClass',function(){return {
 
@@ -96,7 +96,7 @@ var MyClass = cls('MyClass',function(){ return {
 }; });
 
 var instance = new MyClass();
-var result = instancce.commentThis();
+var result = instance.commentThis();
 console.log( result );                  // it is easy John
 
 ```
@@ -124,6 +124,40 @@ classInstance.someMethod();         // logs 'defaultName'
 classInstance.someMethod('john');   // logs 'john'
 classInstance.someMethod(23);       // type mismatch error thrown
 
+```
+
+### constructor
+```js
+var SomeClass = cls('SomeClass',function(){ return {
+
+    /** @property {number} someNumber protected */
+    someNumber: 0,
+
+    /**
+     * @method  __construct public
+     * @param   {number} someArg = 0
+     * @returns {number}
+     */
+    __construct:function __construct(someArg){
+        this.someNumber = someArg + 1;
+        console.log(someArg);
+        return this.someNumber;
+    },
+
+    /**
+     * getting protected property
+     * @method  getSomeNr
+     * @returns {number}
+     */
+    getSomeNr:function getSomeNr(){
+        return this.someNumber;
+    }
+
+}; });
+
+var instance = new SomeClass(10);   // 10
+var nr = instance.getSomeNr();
+console.log( nr );                  // 11
 ```
 
 ### extending
