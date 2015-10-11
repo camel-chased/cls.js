@@ -99,6 +99,59 @@ protected properties/methods are visible only within a class instance and are in
 you cannot access protected variables outside a class instance
 
 
+### type checking inside a method
+
+```js
+
+var MyClass = cls('MyClass',function(){return{
+
+    someMethod:function someMethod(){
+        // cls.var is an obj with type checking on write
+        // this variables will must be of the same type
+        // if not error is thrown
+        var v = cls.var({                   // instead of declaring variables like var someVar;
+            someString:'hello!',            // place it in cls.var object
+            someNumber:123,
+            simpleObj:{},
+            obj:{
+                objects:{
+                    are:{
+                        also:{
+                            available:true
+                            // if you declare obj like this
+                            // you wan't be able to save other construction
+                            // it must be contructed that way
+                            // if not error is thrown, if you want flexible
+                            // obj then use {} object and later add some values
+                        }
+                    }
+                }
+            }
+        });
+
+        v.someString = 'world!';
+        console.log( v.someString );        // world!
+        v.someString = 23;                  // error is thrown
+
+        v.simpleObj.name='John';            //{'name':'John'}
+        v.simpleObj.surname='Smith';        //{'name':'John','surname':'Smith'}
+        v.obj = {};                         // error
+        v.obj= {                            // only this structure will be saved
+            objects:{                       // types of properties also will be checked
+                are:{
+                    also:{
+                        available:false
+                    }
+                }
+            }
+        };
+
+    }
+
+};});
+
+```
+
 ### problems
 methods in instances are not equal (but they are)
 ```js
