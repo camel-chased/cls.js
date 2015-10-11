@@ -6,35 +6,100 @@ No dependency needed.
 this module doesn't have some features yet (see todo's at the bottom of this page)
 
 
-### less lines of code
+### less lines of code with more secure application
 You don't need to checkout type of your arguments in every function with clsjs.  
 Just declare type you want and clsjs will always check it for you.  
 So many lines of code are not necessary now.  
 You don't need type checking and declaring default values in each function (it can be frustrating sometimes).  
 Furthermore you will be able to generate documentation from your classes automaticly - clsjs will do it for you.  
 In the future it will also have basic tests out of the box, so when you write some class, basic test will be waiting to launch.  
+clsjs don't need to be compiled to javascript - it is pure javascript.
 If you want to speed up clsjs developement just give it a star!
 ```js
 var MyClass = cls('MyClass',function(){return {
 
     /**
-     * [easyPeasy description]
      * @method  easyPeasy public
      * @param   {string} name = 'John'
      * @param   {string} surname = 'Doe'
      * @returns {string}
      */
     easyPeasy:function easyPeasy(name,surname){
+        /*  this is not necessary now
+            if( typeof name === 'undefined'){
+                name = "John";
+            }
+            if( typeof surname === 'undefined' ){
+                surname = "Doe";
+            }
+            if( typeof name !== 'string'){
+                throw new Error("no so fast!");
+            }
+            if( typeof surname !== 'string'){
+                throw new Error("no so fast!");
+            }
+         */
         return name+' '+surname;
     },
 
-    nameDeclared:'John',
-    surnameDeclared:'Doe',
 
+    /**
+     * @method  complicatedStructure public
+     * @param   {object} complicatedOne
+     * @returns {undefined}
+     */
+    complicatedStructure:function complicatedStructure( complicatedOne ){
+        // how to check complicated structures?
+        // like this:
+        var v = cls.var({
+            // just declare it, how you want it to be
+            construction:{
+                this_is:{
+                    a:{
+                        complicated:{
+                            structure:true
+                        }
+                    }
+                }
+            }
+        });
+
+        v.construction = complicatedOne;    // this will throw an error if complicatedOne
+                                            // argument doesn't have same structure like declared one above
+                                            // checking this manualy can be a nightmare huh?
+    }
 
 };});
 ```
+### declaring types by comment blocks
+Comment blocks are very handy if you are building larger app or collaborate with other programmers.  
+They describe what every method is doing and what types of arguments are welcome.  
+If you are programmer for some time, you already know that.  
+In clsjs you don't need to learn a lot of tricks to get started.  
+Just do what you are doing in a daily basis, and you will have more out of it.
+Just comment your methods like this:
+```js
 
+var MyClass = cls('MyClass',function(){ return {
+
+    /**
+     * Just place here description and declare types
+     * clsjs will parse this and will work accordingly
+     * @method  commentThis public
+     * @param   {string} name = 'John'
+     * @returns {string}
+     */
+    commentThis: function commentThis( name ){
+        return 'it is easy '+name;
+    }
+
+}; });
+
+var instance = new MyClass();
+var result = instancce.commentThis();
+console.log( result );                  // it is easy John
+
+```
 
 ## usage
 
