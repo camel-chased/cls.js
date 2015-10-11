@@ -179,5 +179,6 @@ this is ok because bounding function is very small and do not eat a lot of memor
 ### todo's:
 * checking return types
 * static declarations
+* type checking for class Constructors / Instances (inside methods / as argument / as return values)
 * accessing protected variables through other instances of the same class
 * make better documentation
