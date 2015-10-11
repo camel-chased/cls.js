@@ -96,3 +96,24 @@ extInstance.publicTest();           // throws error because of privateFn does no
 
 protected properties/methods are visible only within a class instance and are inherited to child classes
 you cannot access protected variables outside a class instance
+
+
+### problems
+methods in instances are not equal (but they are)
+```js
+var clsCon = cls('someClass',function(){return{
+
+    someMethod:function someMethod(){
+        return 'ok';
+    }
+
+};});
+
+var instance_1 = new clsCon();
+var instance_2 = new clsCon();
+console.log( instance_1.someMethod === instance_2.someMethod ); //false
+```
+`instance_1.someMethod` and `instance_2.someMethod` is the same method (same reference of method)
+but they are wrapped up by bound function so they no longer equal but in the end they are point to same fn
+so someMethod is only once declared in memory but bounding function is declared twice here
+this is ok because bounding function is very small and do not eat a lot of memory
