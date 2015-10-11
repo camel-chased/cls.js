@@ -3,6 +3,8 @@ javascript classes with protected, private, public, static declarations, with ru
 This module can be used in node.js or in the browser.  
 No dependency needed.  
 
+this module doesn't have some features yet (see todo's at the bottom of this page)
+
 ## usage
 
 ```js
@@ -174,7 +176,7 @@ so someMethod is only once declared in memory but bounding function is declared 
 this is ok because bounding function is very small and do not eat a lot of memory  
 
 
-### to do
+### todo's:
 * checking return types
 * static declarations
 * accessing protected variables through other instances of the same class
