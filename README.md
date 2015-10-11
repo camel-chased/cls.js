@@ -118,3 +118,8 @@ but they are wrapped up by bounding functions so they no longer equal
 in the end they are point to same fn  
 so someMethod is only once declared in memory but bounding function is declared twice here  
 this is ok because bounding function is very small and do not eat a lot of memory  
+
+
+### to do
+* checking return types
+* accessing protected variables through other instances of the same class
