@@ -1,6 +1,6 @@
 var assert = require("assert");
-var cls = require("../public/js/cls.js");
-var JSC = require('../public/js/jscheck');
+var cls = require("../cls");
+var JSC = require('jscheck');
 
 
 describe('class (cls) [protected properties]',function(){
@@ -259,7 +259,7 @@ describe('class (cls) [protected properties]',function(){
             console.log(prv);
         });
     });
-    
+
     it('should have access to protected prop form class 2 inside instance',function(){
         assert( cls.type( inh2.getAddedProt() ),'string' );
     });

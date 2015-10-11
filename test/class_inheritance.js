@@ -1,6 +1,6 @@
 var assert = require("assert");
-var cls = require("../public/js/cls.js");
-var JSC = require('../public/js/jscheck');
+var cls = require("../cls");
+var JSC = require('jscheck');
 
 describe('class (inheritance)', function() {
 
