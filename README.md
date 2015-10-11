@@ -141,7 +141,6 @@ var SomeClass = cls('SomeClass',function(){ return {
     __construct:function __construct(someArg){
         this.someNumber = someArg + 1;
         console.log(someArg);
-        return this.someNumber;
     },
 
     /**
