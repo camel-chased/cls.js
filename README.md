@@ -1,6 +1,7 @@
 # clsjs
-javascript classes with protected, private, public, static declarations, with runtime type checking and default function arguments.
-
+javascript classes with protected, private, public, static declarations, with runtime type checking and default function arguments.  
+This module can be used in node.js or in the browser.  
+No dependency needed.  
 
 ## usage
 
