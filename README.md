@@ -5,6 +5,37 @@ No dependency needed.
 
 this module doesn't have some features yet (see todo's at the bottom of this page)
 
+
+### less lines of code
+You don't need to checkout type of your arguments in every function with clsjs.  
+Just declare type you want and clsjs will always check it for you.  
+So many lines of code are not necessary now.  
+You don't need type checking and declaring default values in each function (it can be frustrating sometimes).  
+Furthermore you will be able to generate documentation from your classes automaticly - clsjs will do it for you.  
+In the future it will also have basic tests out of the box, so when you write some class, basic test will be waiting to launch.  
+If you want to speed up clsjs developement just give it a star!
+```js
+var MyClass = cls('MyClass',function(){return {
+
+    /**
+     * [easyPeasy description]
+     * @method  easyPeasy public
+     * @param   {string} name = 'John'
+     * @param   {string} surname = 'Doe'
+     * @returns {string}
+     */
+    easyPeasy:function easyPeasy(name,surname){
+        return name+' '+surname;
+    },
+
+    nameDeclared:'John',
+    surnameDeclared:'Doe',
+
+
+};});
+```
+
+
 ## usage
 
 ```js
