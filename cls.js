@@ -321,105 +321,7 @@ var cls = (function () {
         return ok;
     };
 
-    /**
-     * search for comment blocks in a given string and parse it to object
-     * @method getCommentBlocks
-     * @param {string} str
-     * @param {string} className - for error info
-     * @returns {object}
-     */
-    cls.getCommentBlocks = function getCommentBlocks(str, className) {
 
-        //var commentBlock = /\/\*\*?\s?([^\/]+)(?!(\*\/))\n?/gi,
-        var commentBlock = /\/\*\*?\s*([^\/]+)/gim,
-                blocks = {},
-                tmp = [],
-                parsed = '',
-                method = /^\s?\@method +([^\s]+) *(?:([^\n \t]+))?(?: +([^\n]+))?\s?$/gim,
-                methodObj = {},
-                property = /^\@property +\{([^\}]+)\} +([^ \t\r\n]+) *([^\s\*\/]+)?(?: +([^\n\/]+))?$/gim,
-                propertyObj = {},
-                returns = /^\@returns?\s+\{([^\}]+)\}/gim,
-                returnObj = {},
-                i = 0, len = 0, block = '',
-                types = {},
-                methodName = '', propertyName = [], blockNames = [], blockName = '',
-                declarations = [];
-
-        while (cls.isDef(tmp)) {
-            method.lastIndex = 0;
-            property.lastIndex = 0;
-
-            tmp = commentBlock.exec(str);
-            if (cls.isDef(tmp)) {
-                parsed = String(tmp[1]).
-                        replace(/^[\t\*]+/gim, '').
-                        replace(/[\*]+/gim,'').
-                        replace(/^[ \t\n]{2,50}/gi, '').
-                        replace(/\n/gi,'').
-                        replace(/(\@)/gi, "\n$1").
-                        replace(/^\s+/gim, '').
-                        replace(/\s+$/gim, '');
-
-                //checking out method name if this is method
-                methodObj = method.exec(parsed);
-
-                if (cls.isDef(methodObj)) {
-                    methodName = methodObj[ 1 ];
-                    blocks[ methodName ] = {'types': ['function']};
-                    if (methodObj.length === 4) {
-                        if (cls.isDef(methodObj[ 2 ])) {
-                            // declaration is an array like ['public','static']
-                            declarations = [methodObj[ 2 ]];
-                            if (cls.isDef(methodObj[ 3 ])) {
-                                declarations.push(methodObj[ 3 ]);
-                            }
-                            if (cls.checkDeclarations(declarations, className, methodName)) {
-                                blocks[ methodName ].declarations = declarations;
-                            }
-                        } else {
-                            blocks[ methodName ].declarations = ['public'];
-                        }
-                    }
-                    blocks[ methodName ].str = parsed;
-
-                    cls.generateArgumentTypes(blocks[methodName]);
-
-                    // if this is a method it should have a return value
-                    returnObj = returns.exec(parsed);
-                    if (cls.isDef(returnObj)) {
-                        blocks[ methodName ].returns = returnObj[ 1 ].split('|');
-                    }
-
-                } else {
-                    propertyObj = property.exec(parsed);
-
-                    if (cls.isDef(propertyObj)) {
-                        propertyName = propertyObj[ 2 ];
-                        blocks[ propertyName ] = {};
-                        blocks[ propertyName ].str = parsed;
-                        blocks[ propertyName ].types = propertyObj[1].split('|');
-
-                        if (cls.isDef(propertyObj[3])) {
-                            // declaration is an array 3 and 4['public','static']
-                            declarations = [propertyObj[3]];
-                            if (cls.isDef(propertyObj[4])) {
-                                declarations.push(propertyObj[ 4 ]);
-                            }
-                            if (cls.checkDeclarations(declarations, className, propertyName)) {
-                                blocks[ propertyName ].declarations = declarations;
-                            }
-                        } else {
-                            blocks[ propertyName ].declarations = ['public'];
-                        }
-                    }
-                }
-
-            }
-        }
-        //console.log('classType blocks',blocks);
-        return blocks;
-    };
 
     cls.propertyTypeMismatch = function (className, property, available, wasType) {
         if (Array.isArray(available)) {
@@ -515,50 +417,7 @@ var cls = (function () {
         return newArgs;
     };
 
-    /**
-     * for extending a class
-     * @method resolveSourceObject
-     * @param {function} sourceFn
-     * @param {undefined|function} extendFn
-     * @returns {object}
-     */
-    cls.resolveSourceObject = function resolveSourceObject(sourceFn, extendFn) {
 
-        var obj,
-            $parent,
-            extend;
-
-        // this class constructor must be executed to get object that he returns
-        if (!cls.isDef(sourceFn.sourceFn)) {
-            obj = sourceFn();
-        } else {
-            obj = sourceFn.getBaseObject();
-        }
-        //console.log('obj',cls.type(obj),obj);
-        // always execute to return object instead of function
-        if (cls.isDef(extendFn)) {
-            extend = extendFn();
-        }
-
-        //console.log('obj',obj);
-
-        // if object is function then we are extending other classes
-        if (cls.isDef(extend)) {
-
-            if (!cls.isDef(obj)) {
-                throw new Error('obj is undefined');
-            }
-            // getBaseObject is the real object behind constructor
-            //console.log('obj getBaseObj',obj);
-            $parent = cls.clone( obj );
-            // after all we must remove private properties from obj
-            // but now we dont have classTypes
-            obj = cls.merge( obj, extend );
-            obj.$parent = $parent;
-        }
-
-        return obj;
-    };
 
     /**
      * add values of class properties to properties definition for easier assignment
@@ -583,18 +442,19 @@ var cls = (function () {
 
     /**
      * filter class properties by declaration type like public, private etc
+     * if classId is defined then fn return only delcarations of specified class
      * @method getClassPropertiesOf
-     * @param {object} resolvedObj
-     * @param {object} classProperties
-     * @param {object} classTypes
-     * @param {string} declarationName public, static...
+     * @param {object} classObject
+     * @param {string} declarationName
+     * @param {string} classId
      * @returns {array} of strings - names of properties
      */
-    cls.getClassPropertiesOf = function getClassPropertiesOf(classObject, declarationName) {
+    cls.getClassPropertiesOf = function getClassPropertiesOf(classObject, declarationName, classId) {
 
         var result = [],
-                name = '',
-                type;
+            name = '',
+            type;
+
         //console.log('classObject',classObject);
         for (name in classObject.classTypes) {
             type = classObject.classTypes[ name ];
@@ -602,8 +462,18 @@ var cls = (function () {
             if ( cls.isDef( type.declarations ) ) {
                 //console.log('declaration',type.declarations);
                 if ( type.declarations.indexOf(declarationName) !== -1 ) {
-                    //console.log('dodajemy property',name,classProperties);
-                    result.push(name);
+                    // now we are going to check classId if it exists
+                    if( cls.isDef( classId ) ){
+
+                        //console.log('type.classId',type.classId,classId);
+                        if( type.classId === classId){
+                            console.log('getproperties of',declarationName,name,classId);
+                            result.push(name);
+                        }
+
+                    }else{
+                        result.push(name);
+                    }
                 }
             }
         }
@@ -660,17 +530,23 @@ var cls = (function () {
      * @returns {anytype}
      */
     cls.getClassProperty = function getClassProperty(classObject, key) {
-        //console.log('args',args);
-        if ( cls.type( classObject.classProperties[ key ]) === 'function' ) {
-            return function _getClassProperty() {// this is why func !== func of parent class (always brand new fn created here)
+
+        var val = classObject.classProperties[ key ];
+        var whoWants = classObject.classFacade.getId();
+        var whoDefined = classObject.classTypes[ key ].classId;
+
+        console.log('getting property key,whoDefined,whoWants',key, whoDefined, whoWants );
+
+        if ( cls.type( val ) === 'function' ) {
+            return function _getClassProperty() {
+                // this is why func !== func of parent class (always brand new fn created here)
                 var args=[];
-                //console.log('arguments',arguments);
                 args = cls.checkMethodArgTypes(classObject, key, arguments);
-                var result = classObject.classProperties[ key ].apply(classObject.classFacade, args);
+                var result = val.apply(classObject.classFacade, args);
                 return result;
             };
         } else {
-            return classObject.classProperties[ key ];
+            return val;
         }
     };
 
@@ -710,13 +586,9 @@ var cls = (function () {
         // add geter seter to instance too because it might chande and we must update
         // if value is a function then it is going to prototype
 
-        if( cls.type(val) === 'function' ){
-            where = classObject.classInstance;
-        }else{
-            where = classObject.classInstance;
-        }
-        Object.defineProperty( classObject.classInstance, key, gettersetter);
-        classObject.classInstance[ key ] = val;
+        // classPrototype because we don't have instance yet
+        Object.defineProperty( classObject.classPrototype, key, gettersetter);
+        classObject.classPrototype[ key ] = val;
 
     };
 
@@ -759,16 +631,24 @@ var cls = (function () {
      * @param  {[type]}           classId         [description]
      */
     cls.setPrivateProperty = function setPrivatePorperty(classObject, key, val, classId) {
-        //console.log('setting up private property',key,val);
+
+        //console.log('classObject',classObject);
+        var definedBy = classObject.classTypes[ key ].classId;
+        var whoWants = classObject.classFacade.getId();
+
         Object.defineProperty(classObject.classFacade, key, {
             enumerable: true,
             get: function () {
-
+                console.log('getting private property key, whoDefined, whoWants',key,definedBy,whoWants);
                 if( cls.isDef( this.getId ) ){
                     if( this.getId() === classId ){
                         var result = cls.getClassProperty(classObject, key);
-                        return    result;
+                        return result;
+                    }else{
+                        console.log('classId doesnt match',this.getId(),classId);
                     }
+                }else{
+                    console.log('getId is not defined');
                 }
                 return undefined;
 
@@ -782,12 +662,13 @@ var cls = (function () {
 
         // and execute
         classObject.classFacade[ key ] = val;
+        classObject.classProperties[ key ] = val;
     };
 
 
     cls.setPrivateProperties = function setPrivateProperties(classObject, classId) {
 
-        var privateProps = cls.getClassPropertiesOf(classObject, 'private'),
+        var privateProps = cls.getClassPropertiesOf(classObject, 'private', classId),
                 name = '',
                 i = 0,
                 val;
@@ -1026,6 +907,176 @@ var cls = (function () {
 
 
     /**
+     * for extending a class
+     * @method resolveSourceObject
+     * @param {function} sourceFn
+     * @param {undefined|function} extendFn
+     * @returns {object}
+     */
+    cls.resolveSourceObject = function resolveSourceObject(sourceFn, extendFn) {
+
+        var obj,
+            classObject,
+            $parent,
+            extend;
+
+        // this class constructor must be executed to get object that he returns
+        if (!cls.isDef(sourceFn.sourceFn)) {
+            obj = sourceFn();
+        } else {
+            //classObject = sourceFn.getClassObject();
+            obj = sourceFn.getBaseObject();
+        }
+        //console.log('obj',cls.type(obj),obj);
+        // always execute to return object instead of function
+        if (cls.isDef(extendFn)) {
+            extend = extendFn();
+        }
+
+        //console.log('obj',obj);
+
+        // if object is function then we are extending other classes
+        if (cls.isDef(extend)) {
+
+            if (!cls.isDef(obj)) {
+                throw new Error('obj is undefined');
+            }
+            // getBaseObject is the real object behind constructor
+            //console.log('obj getBaseObj',obj);
+            $parent = cls.clone( obj );
+            // after all we must remove private properties from obj
+            // but now we dont have classTypes
+            obj = cls.merge( obj, extend );
+            obj.$parent = $parent;
+        }
+
+        return obj;
+    };
+
+
+
+    /**
+     * search for comment blocks in a given string and parse it to object
+     * @method getCommentBlocks
+     * @param {string} str
+     * @param {string} className - for error info
+     * @returns {object}
+     */
+    cls.getCommentBlocks = function getCommentBlocks(str, className, classId) {
+
+        //var commentBlock = /\/\*\*?\s?([^\/]+)(?!(\*\/))\n?/gi,
+        var commentBlock = /\/\*\*?\s*([^\/]+)/gim,
+                blocks = {},
+                tmp = [],
+                parsed = '',
+                method = /^\s?\@method +([^\s]+) *(?:([^\n \t]+))?(?: +([^\n]+))?\s?$/gim,
+                methodObj = {},
+                property = /^\@property +\{([^\}]+)\} +([^ \t\r\n]+) *([^\s\*\/]+)?(?: +([^\n\/]+))?$/gim,
+                propertyObj = {},
+                returns = /^\@returns?\s+\{([^\}]+)\}/gim,
+                returnObj = {},
+                i = 0, len = 0, block = '',
+                types = {},
+                methodName = '', propertyName = [], blockNames = [], blockName = '',
+                declarations = [];
+
+        while (cls.isDef(tmp)) {
+            method.lastIndex = 0;
+            property.lastIndex = 0;
+
+            tmp = commentBlock.exec(str);
+            if (cls.isDef(tmp)) {
+                parsed = String(tmp[1]).
+                        replace(/^[\t\*]+/gim, '').
+                        replace(/[\*]+/gim,'').
+                        replace(/^[ \t\n]{2,50}/gi, '').
+                        replace(/\n/gi,'').
+                        replace(/(\@)/gi, "\n$1").
+                        replace(/^\s+/gim, '').
+                        replace(/\s+$/gim, '');
+
+                //checking out method name if this is method
+                methodObj = method.exec(parsed);
+
+                // if property is an method
+                if (cls.isDef(methodObj)) {
+                    methodName = methodObj[ 1 ];
+                    blocks[ methodName ] = {'types': ['function']};
+
+                    // ---------------- IMPORTANT ------------------
+
+                    blocks[ methodName ].classId = classId;
+                    blocks[ methodName ].className = className;
+
+                    // ---------------- IMPORTANT ------------------
+
+
+                    if (methodObj.length === 4) {
+                        if (cls.isDef(methodObj[ 2 ])) {
+                            // declaration is an array like ['public','static']
+                            declarations = [methodObj[ 2 ]];
+                            if (cls.isDef(methodObj[ 3 ])) {
+                                declarations.push(methodObj[ 3 ]);
+                            }
+                            if (cls.checkDeclarations(declarations, className, methodName)) {
+                                blocks[ methodName ].declarations = declarations;
+                            }
+                        } else {
+                            blocks[ methodName ].declarations = ['public'];
+                        }
+                    }
+                    blocks[ methodName ].str = parsed;
+
+                    cls.generateArgumentTypes(blocks[methodName]);
+
+                    // if this is a method it should have a return value
+                    returnObj = returns.exec(parsed);
+                    if (cls.isDef(returnObj)) {
+                        blocks[ methodName ].returns = returnObj[ 1 ].split('|');
+                    }
+
+                } else {
+                    // if property is property
+                    propertyObj = property.exec(parsed);
+
+                    if (cls.isDef(propertyObj)) {
+                        propertyName = propertyObj[ 2 ];
+
+
+                        blocks[ propertyName ] = {};
+                        blocks[ propertyName ].str = parsed;
+                        blocks[ propertyName ].types = propertyObj[1].split('|');
+
+                        // ---------------- IMPORTANT ------------------
+
+                        blocks[ propertyName ].classId = classId;
+                        blocks[ propertyName ].className = className;
+
+                        // ---------------- IMPORTANT ------------------
+
+                        if (cls.isDef(propertyObj[3])) {
+                            // declaration is an array 3 and 4['public','static']
+                            declarations = [propertyObj[3]];
+                            if (cls.isDef(propertyObj[4])) {
+                                declarations.push(propertyObj[ 4 ]);
+                            }
+                            if (cls.checkDeclarations(declarations, className, propertyName)) {
+                                blocks[ propertyName ].declarations = declarations;
+                            }
+                        } else {
+                            blocks[ propertyName ].declarations = ['public'];
+                        }
+                    }
+                }
+
+            }
+        }
+        //console.log('classType blocks',blocks);
+        return blocks;
+    };
+
+
+    /**
      * types declaration parsing from comment blocks
      * @method generateClassTypes
      * @param {string} className
@@ -1037,6 +1088,7 @@ var cls = (function () {
     cls.generateClassTypes = function generateClassTypes(className, sourceFn, extendFn, classObject) {
 
         /*
+         * TODO: trzeba to uprościć - musi być jeden stan skompilowany jako object i gotowy do operacji
          * there are three states that class can be
          * first state is when class is brand new and not inherite nothing
          * - objFn will be function with comment blocks without
@@ -1067,12 +1119,14 @@ var cls = (function () {
         var classTypes = {},
             tmpClassTypes = {},
             fullClassTypes = {},
-                extStr = '',
-                extTypes = {},
-                objStr = '',
-                defaultType = {},
-                name = '',
-                val,value;
+            extStr = '',
+            extTypes = {},
+            objStr = '',
+            defaultType = {},
+            name = '',
+            val,value,
+            id;
+
 
         // if we are extending fn then classTypes are there already
         // so we must extend it
@@ -1084,29 +1138,33 @@ var cls = (function () {
                 //if this is a 3 state we are getting classTypes
                 // from second state that should have it
                 tmpClassTypes = sourceFn.sourceFn.getClassTypes();
-                //console.log('classTypes III phaze',classTypes);
+
             } else {
                 // second state - sourceFn.sourceFn is really sourceFn ;) not constructor
                 // so we can get class types from there we must compile it and extend
-                objStr = sourceFn.sourceFn.toString();
-                tmpClassTypes = cls.getCommentBlocks(objStr, className);
-                //NOTE here can be an wrong error with class name
-                // because class name point to now created one - not inherited
-                // sorry this will not happend because class must be ok to compile
-                // so if parent class is defined it must be ok - there will be no error
+
+                tmpClassTypes = sourceFn.getClassTypes();
+
             }
 
             // we must copy only public properties
-            for( name in tmpClassTypes ){
+            // NOTE: but we want to have private for those functions that are public & inherited & use them
+            // so we must store classId in each property to know if it can access private properties
+            // if id of private property will be same as fn that want to get it everything will be ok
+            // if some other instance will access it then it throws error
+            /*for( name in tmpClassTypes ){
                 val = tmpClassTypes[ name ];
                 //console.log(name,'declarations',val.declarations);
                 if( val.declarations.indexOf('private') === -1 ){
                     classTypes[ name ] = val;
                 }
-            }
+            }*/
+            classTypes = tmpClassTypes;
 
             extStr = extendFn.toString();
-            extTypes = cls.getCommentBlocks(extStr, className);
+            extTypes = cls.getCommentBlocks(extStr, className, classObject.currentClassId );
+
+            //console.log('merging',classTypes,"\nwith\n",extTypes);
 
             // merging types
             classTypes = cls.merge(classTypes, extTypes);
@@ -1119,7 +1177,7 @@ var cls = (function () {
         } else { // if we are creating brand new class then generate classTypes
 
             objStr = sourceFn.toString();
-            classTypes = cls.getCommentBlocks(objStr, className);
+            classTypes = cls.getCommentBlocks(objStr, className, classObject.currentClassId );
             fullClassTypes = classTypes;
         }
 
@@ -1137,7 +1195,8 @@ var cls = (function () {
                 //console.log(name,'is not defined - creating public');
                 classTypes[ name ] = {
                     declarations: ['public'],
-                    str: ''
+                    str: '',
+                    classId: classObject.currentClassId
                 };
                 if (cls.type(value) === 'function') {
                     classTypes[ name ].types = ['function'];
@@ -1148,6 +1207,11 @@ var cls = (function () {
                 }
 
             }else if( cls.isDef( fullClassTypes[ name ] ) ){// if some props are missing
+
+                // if property is declared but doesn't have an classId
+                if( !cls.isDef( fullClassTypes[ name ].classId ) ){
+                    classTypes[ name ].classId = classObject.currentClassId;
+                }
 
                 if( !cls.isDef( fullClassTypes[ name ].declarations) ){
                     // if property is declared but doesn't have "declaration"
@@ -1174,7 +1238,6 @@ var cls = (function () {
             }
 
         }
-        //console.log('classTypes',classTypes);
 
         classObject.classTypes = classTypes;
         cls.addClassTypeValues(classObject.classTypes, classObject.resolvedObj);
@@ -1210,27 +1273,28 @@ var cls = (function () {
         if( cls.type(sourceFn) === 'undefined' ){
             throw new Error("Cannot create class [ "+name+" ] from undefined variable.");
         }
-        //console.log('objFn',objFn);
+
+
         resolvedObj = cls.resolveSourceObject(sourceFn, extendFn);
         classObject.resolvedObj = resolvedObj;
         classObject.classInstance = {};
         classObject.classTypes = {};
         classObject.classProperties = {};
         classObject.classFacade = {};
-        classObject.classPrototype = {}; // all prototype function will be stored here until create new instance
+        classObject.classPrototype = {};
+        classObject.currentClassId = cls.guid(); // new id for new class
 
         // this is class to working with
         pseudoClass = function pseudoClass(name, classObject) {
 
-            var baseObject = classObject.resolvedObj,
-                id = cls.guid();
-
-            //console.log('sourceObj',name,id,sourceObj);
+            var id = classObject.currentClassId;
+            console.log('new class',name,id);
 
             this.getId = classObject.classFacade.getId = function () {
                 return id;
             };
 
+            cls.setPublicProperties(classObject);
             cls.setPrivateProperties(classObject,id);
             cls.setProtectedProperties(classObject,id);
         };
@@ -1241,6 +1305,9 @@ var cls = (function () {
         pseudoClass.prototype.getBaseObject = classObject.classFacade.getBaseObject = function () {
             return resolvedObj;
         };
+        pseudoClass.prototype.getClassObject = classObject.classFacade.getClassObject = function(){
+            return classObject;
+        };
         pseudoClass.prototype.getConstructor = classObject.classFacade.getConstructor = function () {
             return pseudoClassConstructor;
         };
@@ -1248,6 +1315,7 @@ var cls = (function () {
             return classTypes;
         };
 
+        classObject.classPrototype = pseudoClass.prototype;
 
         // this fn are copied in each    instance because prototype will
         // have reference only to one variable to every instance
@@ -1257,9 +1325,6 @@ var cls = (function () {
 
             classInstance = new pseudoClass(name, classObject);
             classObject.classInstance = classInstance;
-
-            cls.setPublicProperties(classObject);
-
 
             if (cls.isDef(classInstance.__construct)) {
                 args = cls.checkMethodArgTypes(classObject, '__construct', args);
@@ -1278,6 +1343,8 @@ var cls = (function () {
         pCC.sourceFn = sourceFn;
         pCC.extendFn = extendFn;
 
+        // NOTE: very important process all of the properties will be parsed
+        // and class id will be created for this particular class properties/itself
         cls.generateClassTypes(name, sourceFn, extendFn, classObject);
 
 

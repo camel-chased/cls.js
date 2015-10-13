@@ -9,7 +9,13 @@ describe('class (cls) [private properties]',function(){
 
     it('should not copy private properties',function(){
 
-        Main = cls('main',function(){return{
+        Main = cls('main',function(){
+
+            var privates = function privates(){
+                console.log('hello from js',this);
+            };
+
+            return {
 
             /**
              *
@@ -17,7 +23,7 @@ describe('class (cls) [private properties]',function(){
              * @returns {string}
              */
             privateFN:function(){
-                return '    this should not be visible outside instance';
+                return 'this should not be visible outside instance';
             },
 
             /**
@@ -27,7 +33,7 @@ describe('class (cls) [private properties]',function(){
              */
             publicFN:function(){
                 return this.privateFN();
-            }
+            },
 
         };});
     });
@@ -71,7 +77,13 @@ describe('class (cls) [private properties]',function(){
     });
 
     it('should not inherite private properties from Main class',function(){
-        assert(!nestedInstance.propNested(),'private properties cannot be inherited');
+        assert.throws(function(){
+            nestedInstance.propNested();
+        },'private properties cannot be inherited');
     });
 
+
+    it('should have publicFn working',function(){
+        nestedInstance.publicFN();
+    });
 });
