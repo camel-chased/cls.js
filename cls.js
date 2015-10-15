@@ -1275,14 +1275,14 @@ var cls = (function () {
         }
 
 
-        resolvedObj = cls.resolveSourceObject(sourceFn, extendFn);
-        classObject.resolvedObj = resolvedObj;
+        classObject.parents = {};
         classObject.classInstance = {};
         classObject.classTypes = {};
         classObject.classProperties = {};
+        classObject.propertiesMap = {};
         classObject.classFacade = {};
         classObject.classPrototype = {};
-        classObject.currentClassId = cls.guid(); // new id for new class
+        classObject.classId = cls.guid(); // new id for new class
 
         // this is class to working with
         pseudoClass = function pseudoClass(name, classObject) {
@@ -1303,7 +1303,7 @@ var cls = (function () {
             return name;
         };
         pseudoClass.prototype.getBaseObject = classObject.classFacade.getBaseObject = function () {
-            return resolvedObj;
+            return classObject.resolvedObj;
         };
         pseudoClass.prototype.getClassObject = classObject.classFacade.getClassObject = function(){
             return classObject;
@@ -1312,7 +1312,7 @@ var cls = (function () {
             return pseudoClassConstructor;
         };
         pseudoClass.prototype.getClassTypes = classObject.classFacade.getClassTypes = function () {
-            return classTypes;
+            return classObject.classTypes;
         };
 
         classObject.classPrototype = pseudoClass.prototype;
@@ -1323,21 +1323,20 @@ var cls = (function () {
 
             var args = arguments;
 
-            classInstance = new pseudoClass(name, classObject);
-            classObject.classInstance = classInstance;
+            classObject.classInstance = new pseudoClass(name, classObject);
 
             if (cls.isDef(classInstance.__construct)) {
                 args = cls.checkMethodArgTypes(classObject, '__construct', args);
-                classInstance.__construct.apply(classInstance, args);
+                classInstance.__construct.apply(classObject.classFacade, args);
             }
 
-            return classInstance;
+            return classObject.classInstance;
         };
 
         pCC = pseudoClassConstructor;
 
         pCC.getBaseObject = function () {
-            return resolvedObj;
+            return classObject.resolvedObj;
         };
 
         pCC.sourceFn = sourceFn;
@@ -1354,10 +1353,10 @@ var cls = (function () {
 
         //cls.setStaticProperties( resolvedObj, pseudoClassConstructor );
         //console.log('resolvedObj',cls.type(resolvedObj),resolvedObj );
-        if (!cls.isDef(resolvedObj)) {
+        if (!cls.isDef(classObject.resolvedObj)) {
             throw new Error("Class must be an object.");
         }
-        if (cls.type(resolvedObj) !== 'object') {
+        if (cls.type(classObject.resolvedObj) !== 'object') {
             throw new Error("Class must be an object.");
         }
 
