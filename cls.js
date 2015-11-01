@@ -156,46 +156,6 @@ var cls = (function () {
     return obj3;
   };
 
-/*
-  if (!Array.prototype.forEach) {
-    Array.prototype.forEach = function (fun  ) {
-      var len = this.length;
-      if (len === 0) return;
-      if (typeof fun != "function")
-        throw new TypeError();
-
-      var thisp = arguments[1];
-      for (var i = 0; i < len; i++) {
-        if (i in this)
-          fun.call(thisp, this[i], i, this);
-      }
-    };
-  }
-
-  if (!Object.prototype.forEach) {
-    Object.prototype.forEach = function (fun) {
-      var self = this;
-      var keys = Object.keys(self);
-      var len = keys.length;
-      if (len === 0) return;
-      if (typeof fun !== 'function') {
-        throw new TypeError();
-      }
-      var thisp = arguments[1];
-      var key = '',
-        value;
-      for (var i = 0; i < len; i++) {
-        key = keys[i];
-        value = self[key];
-        if( self.hasOwnProperty(key) ){
-          fun.call(self, value, key);
-        }
-      }
-
-    };
-  }
-*/
-
   var hasOwn = Object.prototype.hasOwnProperty;
   var toString = Object.prototype.toString;
 
@@ -377,9 +337,10 @@ var cls = (function () {
    * @param {string} propName; for error info
    * @returns {boolean}
    */
-  cls.checkDeclarations = function checkDeclarations(declarations, className, propName) {
+  cls.checkDeclarations = function checkDeclarations(declarations, className, propName, isMethod) {
 
     var ok = true;
+
     if (declarations.length > 2)
       return false;
     if (declarations.indexOf('public') !== -1 && declarations.indexOf('private') !== -1)
@@ -388,6 +349,12 @@ var cls = (function () {
       ok = false;
     if (declarations.indexOf('private') !== -1 && declarations.indexOf('protected') !== -1)
       ok = false;
+    if( declarations.indexOf('const') !== -1 && isMethod ){
+      ok = false;
+    }
+    if( declarations.indexOf('final') !== -1 && !isMethod ){
+      ok = false;
+    }
     if (!ok) {
       throw new Error("Property declarations in class [" + className + "] property [" + propName +
         "] are incorrect.");
@@ -780,7 +747,7 @@ var cls = (function () {
               if (cls.isDef(methodObj[3])) {
                 declarations.push(methodObj[3]);
               }
-              if (cls.checkDeclarations(declarations, className, methodName)) {
+              if (cls.checkDeclarations(declarations, className, methodName, true)) {
                 blocks[methodName].declarations = declarations;
               }
               //define public property only when they are undeclared
@@ -823,7 +790,7 @@ var cls = (function () {
               if (cls.isDef(propertyObj[4])) {
                 declarations.push(propertyObj[4]);
               }
-              if (cls.checkDeclarations(declarations, className, propertyName)) {
+              if (cls.checkDeclarations(declarations, className, propertyName,false)) {
                 blocks[propertyName].declarations = declarations;
               }
               // public only when undeclared
@@ -847,7 +814,7 @@ var cls = (function () {
    * @returns {object} classProperty
    */
   function classProperty(data) {
-    var posibleDeclarations = ['public', 'protected', 'private', 'static', 'const'];
+    var posibleDeclarations = ['public', 'protected', 'private', 'static', 'const', 'final'];
     if (cls.isDef(data)) {
 
       if (!cls.isDef(data.classId)) {
@@ -1009,7 +976,7 @@ var cls = (function () {
     var index = type.declarations.indexOf(declaration);
     return index >= 0;
   };
-
+  cls.isType = cls.typeIs;
   /**
    * classInstance constructor - instance is an outside world object
    * @method  clsClassInstance
@@ -1316,9 +1283,32 @@ var cls = (function () {
 
 
   cls.clsClassData.prototype.set = function set(classId, className, propertyName, value) {
+
     var obj = getObject(classId);
-    //TODO check permissions
-    obj.classProperties[ propertyName ].value = value;
+    var propertyClassId = obj.classProperties[ propertyName ].classId;
+    var facade = obj.classFacade;
+    var proprertyObject = getObject(propertyClassId);
+    var propertyFacade = propertyObject.classFacade;
+    var property = obj.classProperties[ propertyName ];
+
+    if( cls.type( property.value ) === 'function' ){
+      if( cls.isType( property,'final' ) ){
+        throw new Error("Method '"+propertyName+"' is final and cannot be changed.");
+      }
+    }else{
+      if( cls.isType(property,'const') ){
+        throw new Error("Property '"+propertyName+"' is const and cannot be changed.");
+      }
+    }
+
+    if( classId === propertyClassId){
+      obj.classProperties[ propertyName ].value = value;
+    }else if(facade.inherits.indexOf( propertyClassId )){
+      obj.classProperties[ propertyName ].value = value;
+    }else{
+      throw new Error("Cannot change property '"+propertyName+"' only child classes can redefine properties.");
+    }
+
   };
 
   var __allClasses = {}; // all classes goes here waiting to be extended / mixed
