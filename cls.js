@@ -156,7 +156,7 @@ var cls = (function () {
     return obj3;
   };
 
-
+/*
   if (!Array.prototype.forEach) {
     Array.prototype.forEach = function (fun  ) {
       var len = this.length;
@@ -194,11 +194,28 @@ var cls = (function () {
 
     };
   }
+*/
 
+  var hasOwn = Object.prototype.hasOwnProperty;
+  var toString = Object.prototype.toString;
 
-function forEach(obj,fun){
-  obj.forEach(fun);
-}
+  function forEach (obj, fn, ctx) {
+      if (toString.call(fn) !== '[object Function]') {
+          throw new TypeError('iterator must be a function');
+      }
+      var l = obj.length;
+      if (l === +l) {
+          for (var i = 0; i < l; i++) {
+              fn.call(ctx, obj[i], i, obj);
+          }
+      } else {
+          for (var k in obj) {
+              if (hasOwn.call(obj, k)) {
+                  fn.call(ctx, obj[k], k, obj);
+              }
+          }
+      }
+  };
 
   /**
    * freeze objects recuresively
@@ -413,7 +430,7 @@ function forEach(obj,fun){
 
         if (classObject.classProperties[key].types.indexOf(cls.type(val)) === -1 &&
           classObject.classProperties[key].types[0] !== 'anytype') {
-          var className = classObject.classInstance.getName(),
+          var className = classObject.classInstance.getCurrentClassName(),
             availableTypes = classObject.classProperties[key].types.join(",");
           cls.propertyTypeMismatch(className, key, availableTypes, cls.type(val));
         }
@@ -461,7 +478,7 @@ function forEach(obj,fun){
               newArgs[i] = undefined;
 
             } else {
-              cls.ArgumentTypeMismatch(classObject.classInstance.getName(), methodName, val.name, val.types,
+              cls.ArgumentTypeMismatch(classObject.classInstance.getCurrentClassName(), methodName, val.name, val.types,
                 'undefined');
             }
           } else {
@@ -470,7 +487,7 @@ function forEach(obj,fun){
 
           type = cls.type(newArgs[i]);
           if (val.types.indexOf(type) === -1 && val.types[0] !== 'anytype') {
-            cls.ArgumentTypeMismatch(classObject.classInstance.getName(), methodName, val.name, val.types, type);
+            cls.ArgumentTypeMismatch(classObject.classInstance.getCurrentClassName(), methodName, val.name, val.types, type);
           }
         }
 
@@ -836,9 +853,10 @@ function forEach(obj,fun){
       if (!cls.isDef(data.classId)) {
         throw new Error("classId is not defined");
       }
+      /* value can be undefined of corse
       if (!cls.isDef(data.value)) {
         throw new Error("value is not defined");
-      }
+      }*/
       if (!cls.isDef(data.declarations)) {
         data.declarations = ['public'];
       } else {
@@ -914,7 +932,7 @@ function forEach(obj,fun){
 
     //console.log('creatig properties from function',classId,objStr);
     cls.getCommentBlocks(source, className, classId, classProperties);
-    //console.log('done',classProperties,"\n\n");
+    //console.log('classProperties',classProperties,"\n\n");
     obj = source();
     // setting up property.value and default parameters if needed
     forEach(obj,function (value, name) {
@@ -1003,12 +1021,10 @@ function forEach(obj,fun){
    */
   cls.clsClassInstance = function classInstance(classId, className, childOf, mixedWith) {
 
-    this.getId = function () {
-      return classId;
-    };
-    this.getName = function getName() {
-      return className;
-    };
+    this.getClassId = getClassId.bind(this,classId);
+    this.getCurrentClassName = getCurrentClassName.bind(this,className);
+    this.getClassName = getClassName.bind(this,classId);
+
     this.childOf = childOf ? childOf : [];
     this.mixedWith = mixedWith ? mixedWith : [];
   };
@@ -1023,8 +1039,8 @@ function forEach(obj,fun){
    * @returns {[type]} [description]
    */
   cls.clsClassInstance.prototype.addPublicProperty = function (propertyName) {
-    var classId = this.getId();
-    var className = this.getName();
+    var classId = this.getClassId();
+    var className = this.getCurrentClassName();
     var self = this;
     var classObject = __allClasses[classId];
     var classProperties = classObject.classProperties;
@@ -1062,6 +1078,33 @@ function forEach(obj,fun){
     return cls.isDef(this[propertyName]);
   };
 
+  function getClassId(classId) {
+    return classId;
+  }
+
+  function getCurrentClassName(className) {
+    return className;
+  }
+
+  function getClassName(classId){
+
+    var obj = getObject(classId);
+    var facade = obj.classFacade;
+    var child = facade.child;
+
+    //console.log("--getting class child",child);
+
+    while( child !== '' ){
+      //console.log("Getting clasName for child",child);
+      obj = getObject( child );
+      facade = obj.classFacade;
+      child = facade.child;
+    }
+
+    return facade.getCurrentClassName();
+
+  }
+
   /**
    * classFacade constructor
    * @method  clsClassFacade
@@ -1071,16 +1114,14 @@ function forEach(obj,fun){
    * @param   {[type]} mixedWith [description]
    * @returns {[type]} [description]
    */
-  cls.clsClassFacade = function classFacade(classId, className, childOf, mixedWith) {
+  cls.clsClassFacade = function classFacade(classId, className) {
 
-    this.getId = function getId() {
-      return classId;
-    };
-    this.getName = function getName() {
-      return className;
-    };
-    this.childOf = childOf ? childOf : [];
-    this.mixedWith = mixedWith ? mixedWith : [];
+    this.getClassId = getClassId.bind(this,classId);
+    this.getCurrentClassName = getCurrentClassName.bind(this,className);
+    this.getClassName = getClassName.bind(this,classId);
+    this.mixedWith = [];
+    this.child = '';
+    this.parent = '';
   };
 
   /**
@@ -1095,10 +1136,10 @@ function forEach(obj,fun){
   cls.clsClassFacade.prototype.addProperty = function (propertyName, data, addToClassProperties, classId) {
 
     if (!cls.isDef(classId)) {
-      classId = this.getId();
+      classId = this.getClassId();
     }
     //console.log('facade.addProperty',classId);
-    var className = this.getName();
+    var className = this.getCurrentClassName();
     var classObject = __allClasses[classId];
     var classData = classObject.classData;
     var self = this;
@@ -1118,7 +1159,7 @@ function forEach(obj,fun){
           return classData.get(classId, propertyName);
         },
         set: function (newVal) {
-          return classData.set(classId, propertyName, newVal);
+          return classData.set(classId, className,propertyName, newVal);
         }
       });
     }
@@ -1169,7 +1210,7 @@ function forEach(obj,fun){
     var facade = this.classFacades[classId];
     var property = this.classProperties[propertyName];
 
-    if (classId === facade.getId()) {
+    if (classId === facade.getClassId()) {
       return true;
     }
     if (facade.mixedWith.indexOf(property.classId)) {
@@ -1184,7 +1225,7 @@ function forEach(obj,fun){
 
   function getName(classId) {
     var obj = getObject(classId);
-    return obj.classFacade.getName();
+    return obj.classFacade.getCurrentClassName();
   }
 
   /**
@@ -1204,14 +1245,14 @@ function forEach(obj,fun){
       throw new Error("There is no property like " + propertyName + " in " + className);
     }
     var result = this.classProperties[propertyName];
-    console.log('getting', propertyName, 'from', className, classId);
+    //console.log('getting', propertyName, 'from', className, classId);
 
     if (cls.isDef(result)) {
 
       // this is only way to get real data
       if (result.classId === classId) {
 
-        console.log(className, 'is owner of', propertyName, 'property of type', cls.type(result.value));
+        //console.log(className, 'is owner of', propertyName, 'property of type', cls.type(result.value));
         // if its mine property i can get it no matter what
         if (cls.type(result.value) === 'function') {
 
@@ -1236,7 +1277,7 @@ function forEach(obj,fun){
         // binding to myself because i should have all properties even
         // private of parents but i cannot access it directly
         var targetName = getName(result.classId);
-        console.log('redirecting to', targetName, result.classId, 'who has this property', propertyName);
+        //console.log('redirecting to', targetName, result.classId, 'who has this property', propertyName);
         return this.get(result.classId, propertyName);
 
       } else if (cls.isDef(classId) &&
@@ -1247,22 +1288,22 @@ function forEach(obj,fun){
         // if its protected property and i can
         // access it becase i'm neighbor or child
         var targetName = getName(result.classId);
-        console.log(targetName, 'is mixed with or child of', className);
+        //console.log(targetName, 'is mixed with or child of', className);
         return this.get(result.classId, propertyName);
 
 
       } else if (cls.isDef(classId) && cls.typeIs(result, 'private')) {
 
-        console.log('classId:', classId, 'result.classId:', result.classId);
-        console.log('this facade', classId);
-        console.log('result facade', getName(result.classId), result.classId);
-        console.log('are we extending?', this.classFacades[classId].extends === result.classId);
+        //console.log('classId:', classId, 'result.classId:', result.classId);
+        //console.log('this facade', classId);
+        //console.log('result facade', getName(result.classId), result.classId);
+        //console.log('are we extending?', this.classFacades[classId].extends === result.classId);
         throw new Error("Cannot access private properties of other classes.");
 
 
       } else {
 
-        console.log('classId', classId, 'result.classId', result.classId);
+        //console.log('classId', classId, 'result.classId', result.classId);
         throw new Error("Cannot access '" + propertyName + "' from outside a class.");
 
 
@@ -1275,7 +1316,9 @@ function forEach(obj,fun){
 
 
   cls.clsClassData.prototype.set = function set(classId, className, propertyName, value) {
-
+    var obj = getObject(classId);
+    //TODO check permissions
+    obj.classProperties[ propertyName ].value = value;
   };
 
   var __allClasses = {}; // all classes goes here waiting to be extended / mixed
@@ -1288,19 +1331,26 @@ function forEach(obj,fun){
    * @returns {undefined}
    */
   function fireConstructor(instance,args){
-    var args = Array.prototype.slice.call(args);
-    var facade = getFacadeOfInstance(instance);
-    var classId = facade.getId();
-    var obj = getObject(classId);
-    var className = facade.getName();
-    console.log("\n\nConsturctor for",className,'if we have no child:',"'"+facade.child+"'");
-    if( facade.child === '' ){
-      console.log("there is no child");
-      if( cls.isDef( facade[className] ) &&  obj.classProperties[className].classId === classId ){
-        facade[className].apply(facade,args);
-      }
+    if( !Array.isArray(args)){
+      args = Array.prototype.slice.call(args);
     }
-    console.log("\n\n");
+    var facade = getFacadeOfInstance(instance);
+    var classId = facade.getClassId();
+    var obj = getObject(classId);
+    var className = facade.getCurrentClassName();
+
+    // if we have constructor we can fire it because if we are here it means that instance is createNested
+    // if we are collecting classes to extend no constructor will fire only when new instance is created
+    // constructor will fire it - when all classes are prepared and ready to instantiate
+    if( cls.isDef( facade[className] ) &&  obj.classProperties[className].classId === classId ){
+      facade[className].apply(facade,args);
+    }else if(facade.parent !== ''){
+      classId = facade.parent;
+      obj = getObject(classId);
+      instance = obj.classInstance;
+      facade = obj.classFacade;
+      fireConstructor(instance,args);
+    }
   }
 
   /**
@@ -1339,7 +1389,6 @@ function forEach(obj,fun){
     var classConstructor = function classConstructor() {
       var args = arguments;
       var instance = cls.create(className, source);
-      instance.constructor.name = className;
       fireConstructor( instance, args );
       return instance;
     }
@@ -1348,7 +1397,7 @@ function forEach(obj,fun){
     classConstructor.___className = className;
     classConstructor.___arguments = arguments;
     classConstructor.isConstructor = true;
-    classConstructor.extend = constructorExtend;
+    classConstructor.extend = constructorExtend.bind(classConstructor);
 
     return classConstructor;
   }
@@ -1416,7 +1465,7 @@ function forEach(obj,fun){
     setObject(classId, result);
 
     forEach(classProperties,function (val, name) {
-      if (val.classId === classFacade.getId()) {
+      if (val.classId === classFacade.getClassId()) {
         classFacade.addProperty(name, val, false);
       }
     });
@@ -1446,7 +1495,7 @@ function forEach(obj,fun){
 
 
   function getClassObjectOfInstance(instance) {
-    var classId = instance.getId();
+    var classId = instance.getClassId();
     var classObject = getObject(classId);
     return classObject;
   }
@@ -1454,7 +1503,7 @@ function forEach(obj,fun){
   var getClassObjectOfFacade = getClassObjectOfInstance;
 
   function getFacadeOfInstance(instance) {
-    var classId = instance.getId();
+    var classId = instance.getClassId();
     var classObject = getObject(classId);
     return classObject.classFacade;
   }
@@ -1475,7 +1524,7 @@ function forEach(obj,fun){
         object = getObject(facade.parent);
         facade = object.classFacade;
       }
-      var classId = facade.getId();
+      var classId = facade.getClassId();
       allChilds.push(classId);
       fuse--;
     }
@@ -1490,7 +1539,7 @@ function forEach(obj,fun){
    * @param   {array} classesToExtend to extend, instead of array you can use argument list class1,class2,class3...
    * @returns {Object} extended Class
    */
-  function _extend(firstClass, secondClass, classProperties) {
+  function _extend(firstClass, secondClass, classProperties, classData) {
 
     var args = Array.prototype.slice.call(arguments),
       classes = [],
@@ -1511,39 +1560,40 @@ function forEach(obj,fun){
       classData = new cls.clsClassData(classProperties);
     }
 
-    if (firstClass.___type === 'class') {
+    if (firstClass.___type === 'class') {//simple class
       firstClassInstance = _create(firstClass.___className, firstClass, classProperties, classData);
-    } else {
-      firstClassInstance = _extend(firstClass.___firstClass, firstClass.___secondClass, classProperties);
+    } else {//extended class
+      firstClassInstance = _extend(firstClass.___firstClass, firstClass.___secondClass, classProperties, classData);
     }
-
     firstClassFacade = getFacadeOfInstance(firstClassInstance);
 
-    secondClassInstance = _create(secondClass.___className, secondClass, classProperties, classData);
-    secondClassObject = __allClasses[secondClassInstance.getId()];
+    if( secondClass.___type === 'class'){//simple class
+      secondClassInstance = _create(secondClass.___className, secondClass, classProperties, classData);
+    }else{//extended class
+      secondClassInstance = _extend(secondClass.___firstClass,secondClass.___secondClass,classProperties, classData);
+    }
+
+    secondClassObject = __allClasses[secondClassInstance.getClassId()];
     secondClassFacade = secondClassObject.classFacade;
 
 
-    classProperties = secondClassObject.classProperties;
-    classData = secondClassObject.classData;
+    //classProperties = secondClassObject.classProperties;
+    //classData = secondClassObject.classData;
 
     // last one is one that we are extending
 
-    secondClassFacade.extend = firstClassInstance.getId();
-    secondClassFacade.parent = firstClassInstance.getId();
-    secondClassFacade.parentName = firstClassInstance.getName();
+    secondClassFacade.extend = firstClassInstance.getClassId();
+    secondClassFacade.parent = firstClassInstance.getClassId();
+    secondClassFacade.parentName = firstClassInstance.getCurrentClassName();
     secondClassFacade.inherits = _instanceInherits(secondClassInstance);
     secondClassFacade.child = '';
-    firstClassFacade.child = secondClassFacade.getId();
+    var childId = secondClassFacade.getClassId();
+    firstClassFacade.child = childId;
 
-    forEach(secondClassFacade.inherits,function (val) {
-      var obj = getObject(val);
-      console.log(secondClassFacade.getName(), 'inherits from', obj.classFacade.getName(), obj.classFacade.getId());
-    });
 
     // we have facades with childOf array containing other classes
     // now we must mix properties in classProperties object so classData can access it and check
-    var secondClassId = secondClassInstance.getId();
+    var secondClassId = secondClassInstance.getClassId();
     forEach(classProperties,function (val, key) {
       // adding properties from parent classes
       if (val.classId !== secondClassId) {
@@ -1553,17 +1603,16 @@ function forEach(obj,fun){
         }
       }
     });
-    //console.log('classProperties',classProperties);
-    //console.log('this class',newClassFacade.getName(),newClassFacade.getId() ,'extends',newClassFacade.extend);
+
     return secondClassInstance;
   };
 
 
-  function arrayExtend(array, classProperties) {
+  function arrayExtend(array, classProperties, classData) {
     var result = array[0];
     forEach(array,function (val, i) {
       if (i > 0) {
-        result = cls.extend(result, val, classProperties);
+        result = cls.extend(result, val, classProperties,classData);
       }
     });
     return result;
@@ -1571,9 +1620,12 @@ function forEach(obj,fun){
 
 
   function constructorExtend(className, source) {
-    console.log('constructor extend');
-    var nextClass = cls.class(className, source);
-    return cls.extend(this, nextClass);
+    if( cls.type( className ) === 'string'){
+      var nextClass = cls.class(className, source);
+      return cls.extend(this, nextClass);
+    }else{
+      return cls.extend(this,className); //className is cls.class already
+    }
   }
 
 
@@ -1586,8 +1638,6 @@ function forEach(obj,fun){
     var classConstructor = function classConstructor() {
         var args = arguments;
         var instance = _extend(firstClass, secondClass);
-        //TODO: construct function should not be public and should not be accessed from anywhere
-        // only here it might be executed
         fireConstructor( instance, args );
         return instance;
       }
@@ -1598,44 +1648,50 @@ function forEach(obj,fun){
     classConstructor.___arguments = arguments;
     classConstructor.___className = secondClass.___className;
     classConstructor.isConstructor = true;
-    classConstructor.extend = constructorExtend;
+    classConstructor.extend = constructorExtend.bind(classConstructor);
     return classConstructor;
   }
+
+
+  cls.empty = function empty(className){
+    return cls.class(className,function(){ return {} });
+  }
+
 
   cls._getAllFacades = function () {
     var facades = {};
     forEach(__allClasses,function (val, classId) {
-      facades[val.classFacade.getName() + '_' + classId] = val.classFacade;
+      facades[val.classFacade.getCurrentClassName() + '_' + classId] = val.classFacade;
     });
     return facades;
   }
 
   cls.logParents = function (instance) {
-    var classId = instance.getId();
-    var className = instance.getName();
+    var classId = instance.getClassId();
+    var className = instance.getCurrentName();
     var classFacade = __allClasses[classId].classFacade;
     var parent = classFacade.parent;
     var parentName = classFacade.parentName;
-    console.log(className + '_' + classId, 'have parent', parentName + '_' + parent);
-    console.log(' ->', className, 'inherits', classFacade.inherits);
+    //console.log(className + '_' + classId, 'have parent', parentName + '_' + parent);
+    //console.log(' ->', className, 'inherits', classFacade.inherits);
     if (parent !== '') {
       cls.logParents(__allClasses[parent].classInstance);
     }
   }
 
   cls.childOf = function (instance) {
-    var classId = instance.getId();
+    var classId = instance.getClassId();
     var classFacade = __allClasses[classId].classFacade;
-    console.log(classFacade.getName(), 'inherits', classFacade.inherits);
+    //console.log(classFacade.getCurrentClassName(), 'inherits', classFacade.inherits);
   }
 
   cls.logProperties = function () {
     forEach(__allClasses,function (obj, classId) {
       var props = obj.classProperties;
       var facade = obj.classFacade;
-      console.log('#class', facade.getName(), facade.getId(), 'have properties:');
+      //console.log('#class', facade.getCurrentClassName(), facade.getClassId(), 'have properties:');
       forEach(props,function (val, name) {
-        console.log('  ', name, 'with id', val.classId);
+        //console.log('  ', name, 'with id', val.classId);
       });
     });
   }
