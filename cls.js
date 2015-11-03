@@ -1595,6 +1595,38 @@ var cls = (function () {
 
 
   /**
+   * if property is not public block it outside a class
+   * @method  lockProperty
+   * @param   {[type]}     name     [description]
+   * @param   {[type]}     instance [description]
+   * @returns {[type]}              [description]
+   */
+  function lockProperty(name,instance){
+
+    var obj = getObject(instance.getClassId());
+    var classProperties = obj.classProperties;
+    var property;
+    var className;
+
+    if(cls.isDef( classProperties[ name ] )){
+
+      property = classProperties[ name ];
+      if( property.declarations.indexOf('public') === -1 ){
+        Object.defineProperty(instance,name,{
+          configureable:false,
+          get:function(){
+            throw new Error("Property '"+name+"' is not public.");
+          }
+        });
+      }
+
+    }else{
+      throw new Error("Internal error: Wrong property name.");
+    }
+
+  }
+
+  /**
    * creating a class instance
    * @method  create
    * @param   {[type]} className [description]
@@ -1658,7 +1690,7 @@ var cls = (function () {
     result.classInstance = classInstance;
 
     forEach(classProperties,function (val, name) {
-      //classInstance.lockProperty(name,val);
+      lockProperty(name,classInstance);
       if (val.classId === classFacade.getClassId()) {
         if( !cls.isDef( classFacade[ name ]) ){
           classFacade.addProperty(name, val, false);
