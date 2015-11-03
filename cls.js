@@ -422,7 +422,8 @@ var cls = (function () {
     var params,
       val, type = '',
       i = 0,
-      newArgs = [];
+      newArgs = [],
+      className;
 
     if (cls.isDef(classObject.classProperties[methodName])) {
       if (cls.isDef(classObject.classProperties[methodName].arguments)) {
@@ -453,9 +454,18 @@ var cls = (function () {
           }
 
           type = cls.type(newArgs[i]);
-          if (val.types.indexOf(type) === -1 && val.types[0] !== 'anytype') {
-            cls.ArgumentTypeMismatch(classObject.classInstance.getCurrentClassName(), methodName, val.name, val.types, type);
+          if( type === 'classInstance' ){
+
+            className = classObject.classFacade.getClassName();
+            canBeClass(newArgs[i],val.types,className,val.name);
+
+          }else{
+
+            if (val.types.indexOf(type) === -1 && val.types[0] !== 'anytype') {
+              cls.ArgumentTypeMismatch(classObject.classInstance.getCurrentClassName(), methodName, val.name, val.types, type);
+            }
           }
+
         }
 
       }
@@ -671,26 +681,30 @@ var cls = (function () {
 
     //var commentBlock = /\/\*\*?\s?([^\/]+)(?!(\*\/))\n?/gi,
     var commentBlock = /\/\*\*?\s*([^\/]+)/gim,
-      blocks = classProperties,
-      tmp = [],
-      parsed = '',
-      method = /^\s?\@method +([^\s]+) *(?:([^\n \t]+))?(?: +([^\n]+))?\s?$/gim,
-      methodObj = {},
-      property = /^\@property +\{([^\}]+)\} +([^ \t\r\n]+) *([^\s\*\/]+)?(?: +([^\n\/]+))?$/gim,
-      propertyObj = {},
-      returns = /^\@returns?\s+\{([^\}]+)\}/gim,
-      returnObj = {},
-      i = 0,
-      len = 0,
-      block = '',
-      types = {},
-      methodName = '',
-      propertyName = [],
-      blockNames = [],
-      blockName = '',
-      declarations = []
-    str = '',
-      obj = {};
+        blocks = classProperties,
+        tmp = [],
+        parsed = '',
+        method = /^\s?\@method +([^\s]+) *(?:([^\n \t]+))?(?: +([^\n]+))?\s?$/gim,
+        methodObj = {},
+        property = /^\@property +\{([^\}]+)\} +([^ \t\r\n]+) *([^\s\*\/]+)?(?: +([^\n\/]+))?$/gim,
+        propertyObj = {},
+        returns = /^\@returns?\s+\{([^\}]+)\}/gim,
+        returnObj = {},
+        i = 0,
+        len = 0,
+        block = '',
+        types = {},
+        methodName = '',
+        propertyName = [],
+        blockNames = [],
+        blockName = '',
+        declarations = []
+        str = '',
+        obj = {},
+        tmpProperty = {};
+
+
+
     if (!cls.isDef(classProperties)) {
       throw new Error('there is no classProperties object!');
     }
@@ -723,14 +737,14 @@ var cls = (function () {
         if (cls.isDef(methodObj)) {
           //console.log('creating property',methodName,classId);
           methodName = methodObj[1];
+
           // check if declared property is defined in object
           if (!cls.isDef(obj[methodName])) {
             throw new Error("Property '" + methodName + "' is declared but not defined in [ " + className +
               " ] class.");
           }
 
-
-          if( !canOverride(classProperty,methodName,classId) ){
+          if( !canOverride(classProperties,methodName,classId) ){
             throw new Error("Cannot override '"+methodName+"' method.");
           }
 
@@ -742,6 +756,7 @@ var cls = (function () {
 
           blocks[methodName].classId = classId;
           blocks[methodName].className = className;
+          blocks[methodName].value = obj[methodName];
 
           // ---------------- IMPORTANT ------------------
 
@@ -772,6 +787,8 @@ var cls = (function () {
             blocks[methodName].returns = returnObj[1].split('|');
           }
 
+          checkClassProperty(blocks[ methodName ], className, methodName);
+
         } else {
           // if property is property
           propertyObj = property.exec(parsed);
@@ -779,13 +796,14 @@ var cls = (function () {
           if (cls.isDef(propertyObj)) {
             propertyName = propertyObj[2];
 
-            if( !canOverride(classProperty,methodName,classId) ){
+            if( !canOverride(classProperties,methodName,classId) ){
               throw new Error("Cannot override '"+methodName+"' property.");
             }
 
             blocks[propertyName] = {};
             blocks[propertyName].str = parsed;
             blocks[propertyName].types = propertyObj[1].split('|');
+            blocks[propertyName].value = obj[propertyName];
 
             // ---------------- IMPORTANT ------------------
 
@@ -808,6 +826,9 @@ var cls = (function () {
               blocks[propertyName].declarations = ['public'];
             }
           }
+
+          checkClassProperty(blocks[propertyName], className, propertyName);
+
         }
 
       }
@@ -818,13 +839,18 @@ var cls = (function () {
 
   /**
    * checking classProperty object, if some values are empty then fill it with defaults
+   * WARNING: don't use it as constructor this function only for checking filling with default
    * @method  classProperty
    * @param   {object} data
    *          data contains: classId, value, declarations, types, arguments, returns
    * @returns {object} classProperty
    */
-  function classProperty(data) {
+  function checkClassProperty(data, className, propertyName) {
+
+    var self = this;
     var posibleDeclarations = ['public', 'protected', 'private', 'static', 'const', 'final'];
+    var currentType = '';
+
     if (cls.isDef(data)) {
 
       if (!cls.isDef(data.classId)) {
@@ -838,18 +864,19 @@ var cls = (function () {
         data.declarations = ['public'];
       } else {
         if (cls.type(data.declarations) !== 'array') {
-          throw new Error("property declaration must be an array");
+          throw new Error("Property declarations must be an array of string at [ "+className+" ] [ "+propertyName+" ]");
         } else {
           forEach(data.declarations,function (val) {
             if (cls.type(val) !== 'string') {
-              throw new Error("property declaration must be a string");
+              throw new Error("Property declaration must be a string at [ "+className+" ] [ "+propertyName+" ]");
             }
             if (posibleDeclarations.indexOf(val) === -1) {
-              throw new Error("Unrecognized property declaration: '" + val + "'");
+              throw new Error("Unrecognized property declaration: '" + val + "' for property [ "+propertyName+" ] in class [ "+className+" ]");
             }
           });
         }
       }
+      // default data types
       if (!cls.isDef(data.types)) {
         if (cls.type(data.value) === 'function') {
           data.types = ['function'];
@@ -857,15 +884,36 @@ var cls = (function () {
           data.types = ['anytype'];
         }
       }
+
+      // if there are delcared types we must check it
+      if( cls.isDef(data.types)){
+        currentType = cls.type( data.value );
+        // if value is a classInstance then check className instead
+
+        if(currentType === 'classInstance'){
+          canBeClass(data.value,data.types,className,propertyName);
+        }else if( data.types.indexOf( currentType ) === -1 ){
+          if( data.types.indexOf('anytype') === -1 ){
+            throw new Error("Property value doesn't match declaration at [ "+className+" ] [ "+propertyName+" ]\nExpected: '"+data.types+"' given: '"+currentType+"'.");
+          }
+        }
+      }
+
+
+      // default returns if this is a function
       if (data.types.indexOf('function') !== -1 && !cls.isDef(data.returns)) {
         data.returns = ['anytype'];
       }
+
+      //default arguments if this is a function
       if (data.types.indexOf('function') !== -1 && !cls.isDef(data.arguments)) {
         data.arguments = [];
       }
+
     } else {
-      throw new Error("cannot create property from empty object");
+      throw new Error("Cannot create property from empty object.");
     }
+
   }
 
   /**
@@ -878,17 +926,16 @@ var cls = (function () {
    * @param   {[type]} declarations [description]
    * @returns {[type]} [description]
    */
-  function defaultClassType(classId, name, value, classProperties, declarations) {
+  function defaultClassType(classId, name, value, classProperties, declarations, className) {
 
     var data = classProperties[name] ? classProperties[name] : {};
 
     if(!cls.isDef(data.classId))data.classId = classId;
     if(!cls.isDef(data.value))data.value = value;
     if (cls.isDef(declarations))data.declarations = declarations;
-    classProperty(data);
+    checkClassProperty(data,className,name);
     //only if there is no value already
     if(!cls.isDef(classProperties[name]))classProperties[name] = data;
-
   }
 
   /**
@@ -919,7 +966,7 @@ var cls = (function () {
 
     // setting up property.value and default parameters if needed
     forEach(obj,function (value, name) {
-      defaultClassType(classId, name, value, classProperties);
+      defaultClassType(classId, name, value, classProperties,undefined,className);
 
       // if this is my property then i can add it, even if it already exists - created by getCommentBlocks
       // it is mine and i can do whatever i want - this is class from function
@@ -946,6 +993,9 @@ var cls = (function () {
    */
   function canOverride(classProperties, propertyName,classId){
     var result = true;
+    if( !cls.type(classProperties) === 'object' ){
+      throw new Error("Wrong class properties object.");
+    }
     if( !cls.isDef( classProperties[ propertyName ]) ){
       return true;
     }else{
@@ -970,8 +1020,12 @@ var cls = (function () {
    */
   cls.addToClassProperties = function (classProperties, name, data) {
     // TODO creating classes from object not TESTED!! can have a lot of bugs!!!
+    var classId = data.classId;
+    var obj = getObject(classId);
+    var facade = obj.classFacade;
+    var className = facade.getClassName();
     if( canOverride(classProperties,name,data.classId) ){
-      classProperty(data);
+      checkClassProperty(data, className, name);
       classProperties[name] = data;
     }
   };
@@ -1174,6 +1228,8 @@ var cls = (function () {
       cls.addToClassProperties(classObject.classProperties, propertyName, data);
     }
 
+    checkPropertyType(classId,className,data.value,propertyName);
+
     if (!cls.isDef(self[propertyName])) {
       // from now we can only set properties through setter - we cannot defineProoperty that is already defined
       Object.defineProperty(self, propertyName, {
@@ -1345,8 +1401,82 @@ var cls = (function () {
   };
 
 
-  cls.clsClassData.prototype.set = function set(classId, className, propertyName, value) {
+  function getClassNameOf(classId){
+    var obj = getObject(classId);
+    return obj.classFacade.getCurrentClassName();
+  }
 
+  function getClassNamesOf(classesIds){
+    var result = [];
+    forEach(classesIds,function(classId){
+      result.push( getClassNameOf(classId) );
+    });
+    return result;
+  }
+
+  function canBeClass(instance,shouldBe,className,propertyName){
+
+    var valueType = instance.getClassName();
+    console.log("canBeClass",propertyName,shouldBe,'is',valueType);
+
+    if( shouldBe.indexOf('anytype') >= 0 ){ return true; }
+    if( shouldBe.indexOf(valueType) >= 0 ){ return true; }
+
+    valueClassId = instance.getClassId();
+
+    // if we inherite from class that we declared everything is ok
+    valueObj = getObject(valueClassId);
+    valueFacade = valueObj.classFacade;
+    valueInherits = valueFacade.inherits;
+    valueClassNames = getClassNamesOf(valueInherits);
+
+    for( key in shouldBe ){
+      var name = shouldBe[key];
+      if(valueClassNames.indexOf(name) >= 0){
+        return true;
+      }
+    }
+    classTypeError(className,propertyName,valueType,shouldBe);
+  }
+
+  function classTypeError(className,propertyName,valueType,shouldBe){
+    throw new Error("Value of [ "+propertyName+" ] in [ "+className+" ] class does not match declaration.\nExpected: '"+shouldBe+"' given: '"+valueType+"'.");
+  }
+
+  /**
+   * check if property is same as declared one
+   * @method  checkPropertyType
+   * @param   {[type]}          value        [description]
+   * @param   {[type]}          className    [description]
+   * @param   {[type]}          propertyName [description]
+   * @returns {[type]}                       [description]
+   */
+  function checkPropertyType(classId,className,value,propertyName){
+
+    var obj = getObject(classId);
+    var shouldBe = obj.classProperties[ propertyName ].types;
+    var valueType = cls.type(value);
+    var valueClassId = '';
+    var valueObj,valueFacade,valueInherits,valueClassNames;
+
+    if( shouldBe.indexOf( valueType )>=0 ){ return true; }
+    if( shouldBe.indexOf('anytype') >= 0 ){ return true; }
+
+    // if given value is a classInstance then check className of that instance
+    if( valueType === 'classInstance' ){
+
+      return canBeClass(value,shouldBe,className,propertyName);
+
+    }else{
+      if( shouldBe.indexOf(valueType) >= 0 ){return true;}
+    }
+
+    // we are here so value is not correct
+    classTypeError(className,propertyName,valueType,shouldBe);
+  }
+
+  cls.clsClassData.prototype.set = function set(classId, className, propertyName, value) {
+    //console.log('classData.set',propertyName);
     var obj = getObject(classId);
     var propertyClassId = obj.classProperties[ propertyName ].classId;
     var facade = obj.classFacade;
@@ -1363,6 +1493,8 @@ var cls = (function () {
         throw new Error("Property '"+propertyName+"' is declared as const and cannot be changed.");
       }
     }
+
+    checkPropertyType(classId,className,value,propertyName);
 
     if( classId === propertyClassId){
       //console.log("SET: it is my property");
@@ -1521,7 +1653,12 @@ var cls = (function () {
     result.publicProperties = publicProperties;
     setObject(classId, result);
 
+    classInstance = new cls.clsClassInstance(classId, className);
+    classInstance.constructor.name = className;
+    result.classInstance = classInstance;
+
     forEach(classProperties,function (val, name) {
+      //classInstance.lockProperty(name,val);
       if (val.classId === classFacade.getClassId()) {
         if( !cls.isDef( classFacade[ name ]) ){
           classFacade.addProperty(name, val, false);
@@ -1530,9 +1667,7 @@ var cls = (function () {
     });
     classData.addClassFacade(classId, classFacade);
 
-    classInstance = new cls.clsClassInstance(classId, className);
-    classInstance.constructor.name = className;
-    result.classInstance = classInstance;
+
     forEach(publicProperties,function (val, name) {
       classInstance.addPublicProperty(name);
     });
@@ -1668,11 +1803,11 @@ var cls = (function () {
   };
 
 
-  function arrayExtend(array, classProperties, classData) {
+  function arrayExtend( array ) {
     var result = array[0];
     forEach(array,function (val, i) {
       if (i > 0) {
-        result = cls.extend(result, val, classProperties,classData);
+        result = cls.extend(result, val);
       }
     });
     return result;
@@ -1693,6 +1828,12 @@ var cls = (function () {
 
     if (cls.type(firstClass) === 'array') {
       return arrayExtend(firstClass);
+    }
+
+    var _args = Array.prototype.slice.call(arguments);
+    //throw new Error("yumi");
+    if( _args.length > 2 ){
+      return arrayExtend(_args);
     }
 
     var classConstructor = function classConstructor() {
