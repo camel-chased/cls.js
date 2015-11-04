@@ -22,7 +22,7 @@
 
  */
 
-var cls = (function () {
+var cls = ( function () {
 
   /**
    * Short method for creating class constructor
@@ -32,8 +32,8 @@ var cls = (function () {
    * @param {object} ext = class structure
    * @returns {object} class constructor that can create instances new myClass()
    */
-  var cls = function createClass(name, obj, ext) {
-    return cls.create(name, obj, ext);
+  var cls = function createClass( name, obj, ext ) {
+    return cls.create( name, obj, ext );
   };
 
   // -------------- builtin helpers ------------------
@@ -44,24 +44,24 @@ var cls = (function () {
    * @param {Object} obj = the variable
    * @returns {String} typeof
    */
-  cls.type = function type(obj) {
+  function _type( obj ) {
 
-    if (typeof obj === 'undefined') {
+    if ( typeof obj === 'undefined' ) {
       return 'undefined';
     }
-    if (obj === null) {
+    if ( obj === null ) {
       return 'null';
     }
-    if (obj === undefined) {
+    if ( obj === undefined ) {
       return 'undefined';
     }
 
-    if (Array.isArray(obj)) {
+    if ( Array.isArray( obj ) ) {
       return 'array';
-    } else if (typeof obj === 'object') {
-      if (cls.isDef(obj.constructor)) {
-        if (cls.isDef(obj.constructor.name)) {
-          if (obj.constructor.name !== '') {
+    } else if ( typeof obj === 'object' ) {
+      if ( _isDef( obj.constructor ) ) {
+        if ( _isDef( obj.constructor.name ) ) {
+          if ( obj.constructor.name !== '' ) {
             return obj.constructor.name;
           } else {
             return typeof obj;
@@ -78,7 +78,7 @@ var cls = (function () {
     }
 
   };
-
+  cls.type = _type;
   /**
    * clone - just clone the object recurively
    *
@@ -86,7 +86,7 @@ var cls = (function () {
    * @param {Object} to = (optional) defining where to clone
    * @returns {Object} cloned object
    */
-  cls.clone = function clone(o, to) {
+  function _clone( o, to ) {
     var clone = {},
       key = '',
       keys,
@@ -95,31 +95,31 @@ var cls = (function () {
       item,
       value;
 
-    if (cls.type(o) !== 'object' && cls.type(o) !== 'array') {
+    if ( _type( o ) !== 'object' && _type( o ) !== 'array' ) {
       return o;
     }
 
-    keys = Object.keys(o);
+    keys = Object.keys( o );
     len = keys.length;
 
-    if (cls.type(o) === 'array') {
+    if ( _type( o ) === 'array' ) {
       clone = [];
     }
 
-    for (; i < len; i++) {
-      key = keys[i];
-      value = o[key];
+    for ( ; i < len; i++ ) {
+      key = keys[ i ];
+      value = o[ key ];
 
-      if (cls.type(value) === 'array' || cls.type(value) === 'object') {
-        item = cls.clone(value);
+      if ( _type( value ) === 'array' || _type( value ) === 'object' ) {
+        item = _clone( value );
       } else {
         item = value;
       }
 
-      clone[key] = item;
-      if (typeof to !== 'undefined') {
-        if (cls.type(to) === 'object' || cls.type(to) === 'function') {
-          to[key] = item;
+      clone[ key ] = item;
+      if ( typeof to !== 'undefined' ) {
+        if ( _type( to ) === 'object' || _type( to ) === 'function' ) {
+          to[ key ] = item;
         }
       }
     }
@@ -133,24 +133,24 @@ var cls = (function () {
    * @param {Object} obj2 = object to copy from
    * @returns {Object} fresh new object with merget properties
    */
-  cls.merge = function merge(obj1, obj2) {
+  function _merge( obj1, obj2 ) {
 
     var key,
-      keys = Object.keys(obj2),
+      keys = Object.keys( obj2 ),
       len = keys.length,
       i = 0,
       tmp = {},
-      _obj2 = cls.clone(obj2),
-      obj3 = cls.clone(obj1);
+      _obj2 = cls.clone( obj2 ),
+      obj3 = cls.clone( obj1 );
 
 
-    for (; i < len; i++) {
-      key = keys[i];
-      if (cls.type(_obj2[key]) === 'object' && cls.type(obj1[key]) === 'object') {
-        tmp = cls.merge(obj3[key], _obj2[key]);
-        obj3[key] = tmp;
+    for ( ; i < len; i++ ) {
+      key = keys[ i ];
+      if ( _type( _obj2[ key ] ) === 'object' && _type( obj1[ key ] ) === 'object' ) {
+        tmp = cls.merge( obj3[ key ], _obj2[ key ] );
+        obj3[ key ] = tmp;
       } else {
-        obj3[key] = _obj2[key];
+        obj3[ key ] = _obj2[ key ];
       }
     }
     return obj3;
@@ -159,22 +159,22 @@ var cls = (function () {
   var hasOwn = Object.prototype.hasOwnProperty;
   var toString = Object.prototype.toString;
 
-  function forEach (obj, fn, ctx) {
-      if (toString.call(fn) !== '[object Function]') {
-          throw new TypeError('iterator must be a function');
+  function forEach( obj, fn, ctx ) {
+    if ( toString.call( fn ) !== '[object Function]' ) {
+      throw new TypeError( 'iterator must be a function' );
+    }
+    var l = obj.length;
+    if ( l === +l ) {
+      for ( var i = 0; i < l; i++ ) {
+        fn.call( ctx, obj[ i ], i, obj );
       }
-      var l = obj.length;
-      if (l === +l) {
-          for (var i = 0; i < l; i++) {
-              fn.call(ctx, obj[i], i, obj);
-          }
-      } else {
-          for (var k in obj) {
-              if (hasOwn.call(obj, k)) {
-                  fn.call(ctx, obj[k], k, obj);
-              }
-          }
+    } else {
+      for ( var k in obj ) {
+        if ( hasOwn.call( obj, k ) ) {
+          fn.call( ctx, obj[ k ], k, obj );
+        }
       }
+    }
   };
 
   /**
@@ -183,19 +183,19 @@ var cls = (function () {
    * @param {Object} obj
    * @returns {Object} freezed object
    */
-  cls.freeze = function freeze(obj) {
-    if (typeof obj === 'undefined')
+  function _freeze( obj ) {
+    if ( typeof obj === 'undefined' )
       return undefined;
 
-    var propNames = Object.getOwnPropertyNames(obj);
-    forEach(propNames,function (name) {
-      var prop = obj[name];
-      if (typeof prop === 'object' && !Object.isFrozen(prop)) {
-        cls.freeze(prop);
+    var propNames = Object.getOwnPropertyNames( obj );
+    forEach( propNames, function ( name ) {
+      var prop = obj[ name ];
+      if ( typeof prop === 'object' && !Object.isFrozen( prop ) ) {
+        cls.freeze( prop );
       }
-    });
+    } );
 
-    return Object.freeze(obj);
+    return Object.freeze( obj );
   };
 
   /**
@@ -204,7 +204,7 @@ var cls = (function () {
    * @param {any} val
    * @returns {Boolean}
    */
-  cls.isDef = function isDef(val) {
+  function _isDef( val ) {
     return typeof val !== 'undefined' && val !== null;
   };
 
@@ -213,11 +213,11 @@ var cls = (function () {
    *
    * @returns {String}
    */
-  cls.guid = function guid() {
+  function _guid() {
     function s4() {
-      return Math.floor((1 + Math.random()) * 0x10000)
-        .toString(16)
-        .substring(1);
+      return Math.floor( ( 1 + Math.random() ) * 0x10000 )
+        .toString( 16 )
+        .substring( 1 );
     }
     return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
       s4() + '-' + s4() + s4() + s4();
@@ -232,21 +232,21 @@ var cls = (function () {
    * @param {string} value
    * @returns {Array|Object|Boolean}
    */
-  cls.convertParamDefault = function convertParamDefault(types, value) {
+  function convertParamDefault( types, value ) {
 
     var tmp = '',
       i = 0,
       type;
 
-    type = types[0];
+    type = types[ 0 ];
 
     type = type.toLowerCase();
 
-    if (cls.isDef(value)) {
-      if (cls.type(value) === 'string') {
+    if ( _isDef( value ) ) {
+      if ( _type( value ) === 'string' ) {
         tmp = value.toLowerCase();
-        if (tmp === 'undefined' || tmp === 'null') {
-          switch (tmp) {
+        if ( tmp === 'undefined' || tmp === 'null' ) {
+          switch ( tmp ) {
           case 'undefined':
             value = undefined;
             break;
@@ -259,29 +259,29 @@ var cls = (function () {
       }
     }
 
-    switch (type) {
+    switch ( type ) {
     case 'string':
-      if (value.substr(0, 1) === "'" || value.substr(0, 1) === '"') {
-        value = value.replace(/^[\'\"]{1}([^\'\"]+)[\'\"]{1}$/gi, "$1");
+      if ( value.substr( 0, 1 ) === "'" || value.substr( 0, 1 ) === '"' ) {
+        value = value.replace( /^[\'\"]{1}([^\'\"]+)[\'\"]{1}$/gi, "$1" );
       }
       break;
     case 'number':
-      value = Number(value);
+      value = Number( value );
       break;
     case 'object':
-      value = JSON.parse(value);
+      value = JSON.parse( value );
       break;
     case 'array':
-      value = JSON.parse(value);
+      value = JSON.parse( value );
       break;
     case 'bool':
     case 'boolean':
-      if (value.toLowerCase() === 'true') {
+      if ( value.toLowerCase() === 'true' ) {
         value = true;
-      } else if (value.toLowerCase() === 'false') {
+      } else if ( value.toLowerCase() === 'false' ) {
         value = false;
       } else {
-        throw new Error("Boolean values must be either true or false.");
+        throw new Error( "Boolean values must be either true or false." );
       }
       break;
     }
@@ -297,32 +297,32 @@ var cls = (function () {
    * @param {object} classType
    * @returns {undefined}
    */
-  function generateArgumentTypes(classType) {
+  function generateArgumentTypes( classType ) {
 
     var params = /^\s?\@param\s+\{([^\}]+)\}\s([a-z0-9\_\$]+)\s?(?:\=\s?([^\n]+))?\s?$/gim,
-      tmp = params.exec(classType.str),
+      tmp = params.exec( classType.str ),
       paramDef = {};
     classType.arguments = [];
 
-    if (cls.isDef(tmp)) {
+    if ( _isDef( tmp ) ) {
 
-      if (tmp.length < 3) {
-        throw new Error("Variable declaration is incorrect.");
+      if ( tmp.length < 3 ) {
+        throw new Error( "Variable declaration is incorrect." );
       }
-      if (cls.isDef(tmp[1]) && cls.isDef(tmp[2])) {
+      if ( _isDef( tmp[ 1 ] ) && _isDef( tmp[ 2 ] ) ) {
 
         paramDef = {
-          types: tmp[1].split('|'),
-          name: tmp[2]
+          types: tmp[ 1 ].split( '|' ),
+          name: tmp[ 2 ]
         };
-        if (cls.isDef(tmp[3])) {
-          paramDef.default = cls.convertParamDefault(tmp[1].split('|'), tmp[3]);
+        if ( _isDef( tmp[ 3 ] ) ) {
+          paramDef.default = convertParamDefault( tmp[ 1 ].split( '|' ), tmp[ 3 ] );
         }
 
-        classType.arguments.push(paramDef);
+        classType.arguments.push( paramDef );
 
       } else {
-        throw new Error("Variable declaration is incorrect.");
+        throw new Error( "Variable declaration is incorrect." );
       }
     }
   };
@@ -337,47 +337,47 @@ var cls = (function () {
    * @param {string} propName; for error info
    * @returns {boolean}
    */
-  cls.checkDeclarations = function checkDeclarations(declarations, className, propName, isMethod) {
+  function checkDeclarations( declarations, className, propName, isMethod ) {
 
     var ok = true;
 
-    if (declarations.length > 2)
+    if ( declarations.length > 2 )
       return false;
-    if (declarations.indexOf('public') !== -1 && declarations.indexOf('private') !== -1)
+    if ( declarations.indexOf( 'public' ) !== -1 && declarations.indexOf( 'private' ) !== -1 )
       ok = false;
-    if (declarations.indexOf('public') !== -1 && declarations.indexOf('protected') !== -1)
+    if ( declarations.indexOf( 'public' ) !== -1 && declarations.indexOf( 'protected' ) !== -1 )
       ok = false;
-    if (declarations.indexOf('private') !== -1 && declarations.indexOf('protected') !== -1)
+    if ( declarations.indexOf( 'private' ) !== -1 && declarations.indexOf( 'protected' ) !== -1 )
       ok = false;
-    if( declarations.indexOf('const') !== -1 && isMethod ){
-      ok = false;
-    }
-    if( declarations.indexOf('final') !== -1 && !isMethod ){
+    if ( declarations.indexOf( 'const' ) !== -1 && isMethod ) {
       ok = false;
     }
-    if (!ok) {
-      throw new Error("Property declarations in class [" + className + "] property [" + propName +
-        "] are incorrect.");
+    if ( declarations.indexOf( 'final' ) !== -1 && !isMethod ) {
+      ok = false;
+    }
+    if ( !ok ) {
+      throw new Error( "Property declarations in class [" + className + "] property [" + propName +
+        "] are incorrect." );
     }
     return ok;
   };
 
 
 
-  cls.propertyTypeMismatch = function (className, property, available, wasType) {
-    if (Array.isArray(available)) {
-      available = available.join(',');
+  function propertyTypeMismatch( className, property, available, wasType ) {
+    if ( Array.isArray( available ) ) {
+      available = available.join( ',' );
     }
-    throw new Error("Type mismatch in class [ " + className + " ] property [ " +
-      property + " ] should be " + available + ", '" + wasType + "' given.");
+    throw new Error( "Type mismatch in class [ " + className + " ] property [ " +
+      property + " ] should be " + available + ", '" + wasType + "' given." );
   };
 
-  cls.ArgumentTypeMismatch = function (className, method, argument, available, wasType) {
-    if (Array.isArray(available)) {
-      available = available.join(',');
+  function ArgumentTypeMismatch( className, method, argument, available, wasType ) {
+    if ( Array.isArray( available ) ) {
+      available = available.join( ',' );
     }
-    throw new Error("Type mismatch in class [ " + className + " ] method [ " +
-      method + " ] argument [ " + argument + " ] should be " + available + ", '" + wasType + "' given.");
+    throw new Error( "Type mismatch in class [ " + className + " ] method [ " +
+      method + " ] argument [ " + argument + " ] should be " + available + ", '" + wasType + "' given." );
   };
 
   /**
@@ -389,17 +389,17 @@ var cls = (function () {
    * @param {anytype} val
    * @returns {boolean}
    */
-  cls.checkClassPropertyType = function checkClassPropertyType(classObject, key, val) {
+  function checkClassPropertyType( classObject, key, val ) {
 
-    if (cls.isDef(classObject.classProperties[key])) {
-      if (cls.isDef(classObject.classProperties[key].types)) {
+    if ( _isDef( classObject.classProperties[ key ] ) ) {
+      if ( _isDef( classObject.classProperties[ key ].types ) ) {
         //console.log('property type',key,classProperties[key].types);
 
-        if (classObject.classProperties[key].types.indexOf(cls.type(val)) === -1 &&
-          classObject.classProperties[key].types[0] !== 'anytype') {
+        if ( classObject.classProperties[ key ].types.indexOf( _type( val ) ) === -1 &&
+          classObject.classProperties[ key ].types[ 0 ] !== 'anytype' ) {
           var className = classObject.classInstance.getCurrentClassName(),
-            availableTypes = classObject.classProperties[key].types.join(",");
-          cls.propertyTypeMismatch(className, key, availableTypes, cls.type(val));
+            availableTypes = classObject.classProperties[ key ].types.join( "," );
+          propertyTypeMismatch( className, key, availableTypes, _type( val ) );
         }
       }
     }
@@ -417,7 +417,7 @@ var cls = (function () {
    * @param {array} args
    * @returns {array} arguments
    */
-  function checkMethodArgTypes(classObject, methodName, args) {
+  function checkMethodArgTypes( classObject, methodName, args ) {
 
     var params,
       val, type = '',
@@ -425,56 +425,89 @@ var cls = (function () {
       newArgs = [],
       className;
 
-    if (cls.isDef(classObject.classProperties[methodName])) {
-      if (cls.isDef(classObject.classProperties[methodName].arguments)) {
+    if ( _isDef( classObject.classProperties[ methodName ] ) ) {
+      if ( _isDef( classObject.classProperties[ methodName ].arguments ) ) {
 
-        params = classObject.classProperties[methodName].arguments;
-        for (i in params) {
-          val = params[i];
+        params = classObject.classProperties[ methodName ].arguments;
+        for ( i in params ) {
+          val = params[ i ];
 
-          if( !Object.prototype.hasOwnProperty.call(params,i) ){ continue; }
-
-
-          if (!cls.isDef(args[i])) {
-
-            if (cls.isDef(val.default)) {
-
-              newArgs[i] = val.default;
-
-            } else if (val.types.indexOf('undefined')) {
-
-              newArgs[i] = undefined;
-
-            } else {
-              cls.ArgumentTypeMismatch(classObject.classInstance.getCurrentClassName(), methodName, val.name, val.types,
-                'undefined');
-            }
-          } else {
-            newArgs[i] = args[i];
+          if ( !Object.prototype.hasOwnProperty.call( params, i ) ) {
+            continue;
           }
 
-          type = cls.type(newArgs[i]);
-          if( type === 'classInstance' ){
+
+          if ( !_isDef( args[ i ] ) ) {
+
+            if ( _isDef( val.default ) ) {
+
+              newArgs[ i ] = val.default;
+
+            } else if ( val.types.indexOf( 'undefined' ) ) {
+
+              newArgs[ i ] = undefined;
+
+            } else {
+              ArgumentTypeMismatch( classObject.classInstance.getCurrentClassName(), methodName, val.name, val.types,
+                'undefined' );
+            }
+          } else {
+            newArgs[ i ] = args[ i ];
+          }
+
+          type = _type( newArgs[ i ] );
+          if ( type === 'clsClassInstance' ) {
 
             className = classObject.classFacade.getClassName();
-            canBeClass(newArgs[i],val.types,className,val.name);
+            canBeClass( newArgs[ i ], val.types, className, val.name );
 
-          }else{
+          } else {
 
-            if (val.types.indexOf(type) === -1 && val.types[0] !== 'anytype') {
-              cls.ArgumentTypeMismatch(classObject.classInstance.getCurrentClassName(), methodName, val.name, val.types, type);
+            if ( val.types.indexOf( type ) === -1 && val.types[ 0 ] !== 'anytype' ) {
+              ArgumentTypeMismatch( classObject.classInstance.getCurrentClassName(), methodName, val.name, val.types,
+                type );
             }
           }
 
         }
 
       }
-    }else{
-      throw new Error("There is no such method like ",methodName );
+    } else {
+      throw new Error( "There is no such method like ", methodName );
     }
 
     return newArgs;
   };
+
+
+  function checkReturnValue( classId, methodName, value ) {
+
+    var obj = getObject( classId );
+    var classProperties = obj.classProperties;
+    var currentType = _type( value );
+    var facade = obj.classFacade;
+    var className = facade.getClassName();
+
+    if ( currentType === 'clsClassInstance' ) {
+      currentType = value.getClassName();
+    }
+
+    if ( !_isDef( classProperties[ methodName ] ) ) {
+      throw new Error( "There is no method called '" + methodName + "' in [ " + className + " ] class." );
+    }
+
+    var returns = classProperties[ methodName ].returns;
+    if ( returns.indexOf( 'anytype' ) >= 0 ) {
+      return true;
+    }
+
+    if ( returns.indexOf( currentType ) === -1 ) {
+      throw new Error( "Type mismatch. Method [ " + methodName + " ] from [ " + className +
+        " ] class, should return '" +
+        returns.join( ',' ) + "', not '" + currentType + "'." );
+    }
+    return true;
+  }
 
 
 
@@ -487,29 +520,29 @@ var cls = (function () {
    * @param {string} classId
    * @returns {object} propertyName -> propertyValue
    */
-  cls.getClassPropertiesOf = function getClassPropertiesOf(classProperties, declarationName, classId) {
+  function getClassPropertiesOf( classProperties, declarationName, classId ) {
 
     var result = {},
       name = '',
       type;
 
     //console.log('classObject',classObject);
-    for (name in classProperties) {
-      type = classProperties[name];
+    for ( name in classProperties ) {
+      type = classProperties[ name ];
       //console.log('type',type);
-      if (cls.isDef(type.declarations)) {
+      if ( _isDef( type.declarations ) ) {
         //console.log('declaration',type.declarations);
-        if (type.declarations.indexOf(declarationName) !== -1) {
+        if ( type.declarations.indexOf( declarationName ) !== -1 ) {
           // now we are going to check classId if it exists
-          if (cls.isDef(classId)) {
+          if ( _isDef( classId ) ) {
 
             //console.log('type.classId',type.classId,classId);
-            if (type.classId === classId) {
-              result[name] = type.value;
+            if ( type.classId === classId ) {
+              result[ name ] = type.value;
             }
 
           } else {
-            result.push(name);
+            result.push( name );
           }
         }
       }
@@ -528,9 +561,9 @@ var cls = (function () {
    * @param {string} path - for exception information
    * @returns {boolean}
    */
-  cls.checkObjectContentTypes = function checkObjectContentTypes(is, should, path) {
+  function checkObjectContentTypes( is, should, path ) {
 
-    var keys = Object.keys(is),
+    var keys = Object.keys( is ),
       len = keys.length,
       i = 0,
       key = '',
@@ -540,36 +573,36 @@ var cls = (function () {
       shouldType = '',
       recursiveOk = true;
 
-    if (!cls.isDef(path)) {
+    if ( !_isDef( path ) ) {
       path = '';
     }
 
-    for (; i < len; i++) {
-      key = keys[i];
+    for ( ; i < len; i++ ) {
+      key = keys[ i ];
 
-      if (!cls.isDef(should[key])) {
+      if ( !_isDef( should[ key ] ) ) {
         continue;
       }
 
-      isVal = is[key];
-      shouldVal = should[key];
+      isVal = is[ key ];
+      shouldVal = should[ key ];
 
-      isType = cls.type(isVal);
-      shouldType = cls.type(shouldVal);
+      isType = _type( isVal );
+      shouldType = _type( shouldVal );
 
-      if (isType === 'object' || isType === 'function') {
+      if ( isType === 'object' || isType === 'function' ) {
 
-        recursiveOk = cls.checkObjectContentTypes(isVal, shouldVal, path + '.' + key);
-        if (!recursiveOk) {
+        recursiveOk = checkObjectContentTypes( isVal, shouldVal, path + '.' + key );
+        if ( !recursiveOk ) {
           return false;
         }
 
       } else {
-        if (isType !== shouldType) {
+        if ( isType !== shouldType ) {
           path = path + '.' + key;
-          path = path.substr(1);
-          throw new Error("Type mismatch. Object property [ " + path + " ] should be an " + shouldType + ".\n'" +
-            isType + "' given.");
+          path = path.substr( 1 );
+          throw new Error( "Type mismatch. Object property [ " + path + " ] should be an " + shouldType + ".\n'" +
+            isType + "' given." );
         }
       }
     }
@@ -585,7 +618,7 @@ var cls = (function () {
    * @param {string} path for informational purpose
    * @returns {object}
    */
-  cls.var = function (obj, path) {
+  cls.var = function ( obj, path ) {
 
     var newObj = {},
       key = '',
@@ -595,72 +628,72 @@ var cls = (function () {
       type = '',
       val;
 
-    if (!cls.isDef(path)) {
+    if ( !_isDef( path ) ) {
       path = '';
     }
 
-    keys = Object.keys(obj);
+    keys = Object.keys( obj );
     //console.log('traversing ',obj,keys);
-    for (len = keys.length; i < len; i++) {
-      key = keys[i];
-      val = obj[key];
-      type = cls.type(val);
+    for ( len = keys.length; i < len; i++ ) {
+      key = keys[ i ];
+      val = obj[ key ];
+      type = _type( val );
 
 
-      (function (newObj, val, key, type, obj, path) {
+      ( function ( newObj, val, key, type, obj, path ) {
         var newType = '',
           keys = [],
           contentOk = true,
           tmp = {};
 
-        if (type === 'object' || type === 'function') {
+        if ( type === 'object' || type === 'function' ) {
 
-          tmp = cls.var(obj[key], path + '.' + key);
-          Object.defineProperty(newObj, key, {
+          tmp = cls.var( obj[ key ], path + '.' + key );
+          Object.defineProperty( newObj, key, {
             get: function () {
               return tmp;
             },
-            set: function (newVal) {
-              var newType = cls.type(newVal);
-              if (newType !== type && type !== 'anytype') {
+            set: function ( newVal ) {
+              var newType = _type( newVal );
+              if ( newType !== type && type !== 'anytype' ) {
                 path = path + '.' + key;
-                path = path.substr(1);
-                throw new Error("Type mismatch. Object [ " + path + " ] should be an " + type + ".\n'" +
-                  newType + "' given.");
+                path = path.substr( 1 );
+                throw new Error( "Type mismatch. Object [ " + path + " ] should be an " + type + ".\n'" +
+                  newType + "' given." );
               } else {
                 // newVal is object or function
-                contentOk = cls.checkObjectContentTypes(newVal, obj[key], path + '.' + key);
-                if (contentOk) {
-                  obj[key] = tmp;
+                contentOk = checkObjectContentTypes( newVal, obj[ key ], path + '.' + key );
+                if ( contentOk ) {
+                  obj[ key ] = tmp;
                 }
               }
             }
-          });
+          } );
 
         } else {
 
-          Object.defineProperty(newObj, key, {
+          Object.defineProperty( newObj, key, {
             //getting object from old object
             get: function () {
-              return obj[key];
+              return obj[ key ];
             },
             //setting object to old object
-            set: function (newVal) {
+            set: function ( newVal ) {
 
-              newType = cls.type(newVal);
-              if (newType !== type && type !== 'anytype') {
+              newType = _type( newVal );
+              if ( newType !== type && type !== 'anytype' ) {
                 path = path + '.' + key;
-                path = path.substr(1);
-                throw new Error("Type mismatch. Object [ " + path + " ] should be an " + type + ",");
+                path = path.substr( 1 );
+                throw new Error( "Type mismatch. Object [ " + path + " ] should be an " + type + "," );
               } else {
                 // this is a basic type and is verified just assign it
-                obj[key] = newVal;
+                obj[ key ] = newVal;
               }
             }
-          });
+          } );
         }
 
-      }(newObj, val, key, type, obj, path));
+      }( newObj, val, key, type, obj, path ) );
 
     }
 
@@ -677,157 +710,164 @@ var cls = (function () {
    * @param {string} className - for error info
    * @returns {object}
    */
-  cls.getCommentBlocks = function getCommentBlocks(source, className, classId, classProperties) {
+  function getCommentBlocks( sourceObject, className, classId, classProperties ) {
 
     //var commentBlock = /\/\*\*?\s?([^\/]+)(?!(\*\/))\n?/gi,
     var commentBlock = /\/\*\*?\s*([^\/]+)/gim,
-        blocks = classProperties,
-        tmp = [],
-        parsed = '',
-        method = /^\s?\@method +([^\s]+) *(?:([^\n \t]+))?(?: +([^\n]+))?\s?$/gim,
-        methodObj = {},
-        property = /^\@property +\{([^\}]+)\} +([^ \t\r\n]+) *([^\s\*\/]+)?(?: +([^\n\/]+))?$/gim,
-        propertyObj = {},
-        returns = /^\@returns?\s+\{([^\}]+)\}/gim,
-        returnObj = {},
-        i = 0,
-        len = 0,
-        block = '',
-        types = {},
-        methodName = '',
-        propertyName = [],
-        blockNames = [],
-        blockName = '',
-        declarations = []
-        str = '',
-        obj = {},
-        tmpProperty = {};
+      blocks = classProperties,
+      tmp = [],
+      parsed = '',
+      method = /^\s?\@method +([^\s]+) *(?:([^\n \t]+))?(?: +([^\n]+))?\s?$/gim,
+      methodObj = {},
+      property = /^\@property +\{([^\}]+)\} +([^ \t\r\n]+) *([^\s\*\/]+)?(?: +([^\n\/]+))?$/gim,
+      propertyObj = {},
+      returns = /^\@returns?\s+\{([^\}]+)\}/gim,
+      returnObj = {},
+      i = 0,
+      len = 0,
+      block = '',
+      types = {},
+      methodName = '',
+      propertyName = [],
+      blockNames = [],
+      blockName = '',
+      declarations = [],
+      str = sourceObject.str,
+      obj = sourceObject.obj,
+      tmpProperty = {};
 
 
 
-    if (!cls.isDef(classProperties)) {
-      throw new Error('there is no classProperties object!');
+    if ( !_isDef( classProperties ) ) {
+      throw new Error( 'there is no classProperties object!' );
     }
 
-    if (cls.type(source) === 'function') {
+    /*
+    if ( _type( source ) === 'function' ) {
       str = source.toString();
       obj = source();
     } else {
-      throw new Error("comment blocks can only be defined in functions that returns object");
+      throw new Error( "comment blocks can only be defined in functions that returns object" );
     }
+    */
 
-    while (cls.isDef(tmp)) {
+    while ( _isDef( tmp ) ) {
       method.lastIndex = 0;
       property.lastIndex = 0;
 
-      tmp = commentBlock.exec(str);
-      if (cls.isDef(tmp)) {
-        parsed = String(tmp[1]).
-        replace(/^[\t\*]+/gim, '').
-        replace(/[\*]+/gim, '').
-        replace(/^[ \t\n]{2,50}/gi, '').
-        replace(/\n/gi, '').
-        replace(/(\@)/gi, "\n$1").
-        replace(/^\s+/gim, '').
-        replace(/\s+$/gim, '');
+      tmp = commentBlock.exec( str );
+      if ( _isDef( tmp ) ) {
+        parsed = String( tmp[ 1 ] ).
+        replace( /^[\t\*]+/gim, '' ).
+        replace( /[\*]+/gim, '' ).
+        replace( /^[ \t\n]{2,50}/gi, '' ).
+        replace( /\n/gi, '' ).
+        replace( /(\@)/gi, "\n$1" ).
+        replace( /^\s+/gim, '' ).
+        replace( /\s+$/gim, '' );
         //checking out method name if this is method
-        methodObj = method.exec(parsed);
+        methodObj = method.exec( parsed );
 
         // if property is an method
-        if (cls.isDef(methodObj)) {
+        if ( _isDef( methodObj ) ) {
           //console.log('creating property',methodName,classId);
-          methodName = methodObj[1];
+          methodName = methodObj[ 1 ];
 
           // check if declared property is defined in object
-          if (!cls.isDef(obj[methodName])) {
-            throw new Error("Property '" + methodName + "' is declared but not defined in [ " + className +
-              " ] class.");
+          if ( !_isDef( obj[ methodName ] ) ) {
+            throw new Error( "Property '" + methodName + "' is declared but not defined in [ " + className +
+              " ] class." );
           }
 
-          if( !canOverride(classProperties,methodName,classId) ){
-            throw new Error("Cannot override '"+methodName+"' method.");
+          if ( !canOverride( classProperties, methodName, classId ) ) {
+            throw new Error( "Cannot override '" + methodName + "' method." );
           }
 
-          blocks[methodName] = {
-            'types': ['function']
+          blocks[ methodName ] = {
+            'types': [ 'function' ]
           };
 
           // ---------------- IMPORTANT ------------------
 
-          blocks[methodName].classId = classId;
-          blocks[methodName].className = className;
-          blocks[methodName].value = obj[methodName];
+          blocks[ methodName ].classId = classId;
+          blocks[ methodName ].className = className;
+          blocks[ methodName ].value = obj[ methodName ];
 
           // ---------------- IMPORTANT ------------------
 
 
-          if (methodObj.length === 4) {
-            if (cls.isDef(methodObj[2])) {
+          if ( methodObj.length === 4 ) {
+            if ( _isDef( methodObj[ 2 ] ) ) {
               // declaration is an array like ['public','static']
-              declarations = [methodObj[2]];
+              declarations = [ methodObj[ 2 ] ];
 
-              if (cls.isDef(methodObj[3])) {
-                declarations.push(methodObj[3]);
+              if ( _isDef( methodObj[ 3 ] ) ) {
+                declarations.push( methodObj[ 3 ] );
               }
-              if (cls.checkDeclarations(declarations, className, methodName, true)) {
-                blocks[methodName].declarations = declarations;
+              if ( checkDeclarations( declarations, className, methodName, true ) ) {
+                blocks[ methodName ].declarations = declarations;
               }
               //define public property only when they are undeclared
-            } else if (!cls.isDef(blocks[methodName].declarations)) {
-              blocks[methodName].declarations = ['public'];
+            } else if ( !_isDef( blocks[ methodName ].declarations ) ) {
+              blocks[ methodName ].declarations = [ 'public' ];
             }
           }
-          blocks[methodName].str = parsed;
+          blocks[ methodName ].str = parsed;
 
-          generateArgumentTypes(blocks[methodName]);
+          generateArgumentTypes( blocks[ methodName ] );
 
           // if this is a method it should have a return value
-          returnObj = returns.exec(parsed);
-          if (cls.isDef(returnObj)) {
-            blocks[methodName].returns = returnObj[1].split('|');
+          returnObj = returns.exec( parsed );
+          if ( _isDef( returnObj ) ) {
+            blocks[ methodName ].returns = returnObj[ 1 ].split( '|' );
+            forEach( blocks[ methodName ].returns, function ( val, key ) {
+              if ( val.toLowerCase() === 'type' || val.toLowerCase() === '[type]' ) {
+                blocks[ methodName ].returns[ key ] = 'anytype';
+              }
+            } );
           }
 
-          checkClassProperty(blocks[ methodName ], className, methodName);
+          checkClassProperty( blocks[ methodName ], className, methodName );
 
         } else {
           // if property is property
-          propertyObj = property.exec(parsed);
+          propertyObj = property.exec( parsed );
 
-          if (cls.isDef(propertyObj)) {
-            propertyName = propertyObj[2];
+          if ( _isDef( propertyObj ) ) {
+            propertyName = propertyObj[ 2 ];
 
-            if( !canOverride(classProperties,methodName,classId) ){
-              throw new Error("Cannot override '"+methodName+"' property.");
+            if ( !canOverride( classProperties, methodName, classId ) ) {
+              throw new Error( "Cannot override '" + methodName + "' property." );
             }
 
-            blocks[propertyName] = {};
-            blocks[propertyName].str = parsed;
-            blocks[propertyName].types = propertyObj[1].split('|');
-            blocks[propertyName].value = obj[propertyName];
+            blocks[ propertyName ] = {};
+            blocks[ propertyName ].str = parsed;
+            blocks[ propertyName ].types = propertyObj[ 1 ].split( '|' );
+            blocks[ propertyName ].value = obj[ propertyName ];
 
             // ---------------- IMPORTANT ------------------
 
-            blocks[propertyName].classId = classId;
-            blocks[propertyName].className = className;
+            blocks[ propertyName ].classId = classId;
+            blocks[ propertyName ].className = className;
 
             // ---------------- IMPORTANT ------------------
 
-            if (cls.isDef(propertyObj[3])) {
+            if ( _isDef( propertyObj[ 3 ] ) ) {
               // declaration is an array 3 and 4['public','static']
-              declarations = [propertyObj[3]];
-              if (cls.isDef(propertyObj[4])) {
-                declarations.push(propertyObj[4]);
+              declarations = [ propertyObj[ 3 ] ];
+              if ( _isDef( propertyObj[ 4 ] ) ) {
+                declarations.push( propertyObj[ 4 ] );
               }
-              if (cls.checkDeclarations(declarations, className, propertyName,false)) {
-                blocks[propertyName].declarations = declarations;
+              if ( checkDeclarations( declarations, className, propertyName, false ) ) {
+                blocks[ propertyName ].declarations = declarations;
               }
               // public only when undeclared
-            } else if (!cls.isDef(blocks[propertyName].declarations)) {
-              blocks[propertyName].declarations = ['public'];
+            } else if ( !_isDef( blocks[ propertyName ].declarations ) ) {
+              blocks[ propertyName ].declarations = [ 'public' ];
             }
           }
 
-          checkClassProperty(blocks[propertyName], className, propertyName);
+          checkClassProperty( blocks[ propertyName ], className, propertyName );
 
         }
 
@@ -845,73 +885,77 @@ var cls = (function () {
    *          data contains: classId, value, declarations, types, arguments, returns
    * @returns {object} classProperty
    */
-  function checkClassProperty(data, className, propertyName) {
+  function checkClassProperty( data, className, propertyName ) {
 
     var self = this;
-    var posibleDeclarations = ['public', 'protected', 'private', 'static', 'const', 'final'];
+    var posibleDeclarations = [ 'public', 'protected', 'private', 'static', 'const', 'final' ];
     var currentType = '';
 
-    if (cls.isDef(data)) {
+    if ( _isDef( data ) ) {
 
-      if (!cls.isDef(data.classId)) {
-        throw new Error("classId is not defined");
+      if ( !_isDef( data.classId ) ) {
+        throw new Error( "classId is not defined" );
       }
       /* value can be undefined of corse
-      if (!cls.isDef(data.value)) {
+      if (!_isDef(data.value)) {
         throw new Error("value is not defined");
       }*/
-      if (!cls.isDef(data.declarations)) {
-        data.declarations = ['public'];
+      if ( !_isDef( data.declarations ) ) {
+        data.declarations = [ 'public' ];
       } else {
-        if (cls.type(data.declarations) !== 'array') {
-          throw new Error("Property declarations must be an array of string at [ "+className+" ] [ "+propertyName+" ]");
+        if ( _type( data.declarations ) !== 'array' ) {
+          throw new Error( "Property declarations must be an array of string at [ " + className + " ] [ " +
+            propertyName + " ]" );
         } else {
-          forEach(data.declarations,function (val) {
-            if (cls.type(val) !== 'string') {
-              throw new Error("Property declaration must be a string at [ "+className+" ] [ "+propertyName+" ]");
+          forEach( data.declarations, function ( val ) {
+            if ( _type( val ) !== 'string' ) {
+              throw new Error( "Property declaration must be a string at [ " + className + " ] [ " +
+                propertyName + " ]" );
             }
-            if (posibleDeclarations.indexOf(val) === -1) {
-              throw new Error("Unrecognized property declaration: '" + val + "' for property [ "+propertyName+" ] in class [ "+className+" ]");
+            if ( posibleDeclarations.indexOf( val ) === -1 ) {
+              throw new Error( "Unrecognized property declaration: '" + val + "' for property [ " +
+                propertyName + " ] in class [ " + className + " ]" );
             }
-          });
+          } );
         }
       }
       // default data types
-      if (!cls.isDef(data.types)) {
-        if (cls.type(data.value) === 'function') {
-          data.types = ['function'];
+      if ( !_isDef( data.types ) ) {
+        if ( _type( data.value ) === 'function' ) {
+          data.types = [ 'function' ];
         } else {
-          data.types = ['anytype'];
+          data.types = [ 'anytype' ];
         }
       }
 
       // if there are delcared types we must check it
-      if( cls.isDef(data.types)){
-        currentType = cls.type( data.value );
+      if ( _isDef( data.types ) ) {
+        currentType = _type( data.value );
         // if value is a classInstance then check className instead
 
-        if(currentType === 'classInstance'){
-          canBeClass(data.value,data.types,className,propertyName);
-        }else if( data.types.indexOf( currentType ) === -1 ){
-          if( data.types.indexOf('anytype') === -1 ){
-            throw new Error("Property value doesn't match declaration at [ "+className+" ] [ "+propertyName+" ]\nExpected: '"+data.types+"' given: '"+currentType+"'.");
+        if ( currentType === 'clsClassInstance' ) {
+          canBeClass( data.value, data.types, className, propertyName );
+        } else if ( data.types.indexOf( currentType ) === -1 ) {
+          if ( data.types.indexOf( 'anytype' ) === -1 ) {
+            throw new Error( "Property value doesn't match declaration at [ " + className + " ] [ " + propertyName +
+              " ]\nExpected: '" + data.types + "' given: '" + currentType + "'." );
           }
         }
       }
 
 
       // default returns if this is a function
-      if (data.types.indexOf('function') !== -1 && !cls.isDef(data.returns)) {
-        data.returns = ['anytype'];
+      if ( data.types.indexOf( 'function' ) !== -1 && !_isDef( data.returns ) ) {
+        data.returns = [ 'anytype' ];
       }
 
       //default arguments if this is a function
-      if (data.types.indexOf('function') !== -1 && !cls.isDef(data.arguments)) {
+      if ( data.types.indexOf( 'function' ) !== -1 && !_isDef( data.arguments ) ) {
         data.arguments = [];
       }
 
     } else {
-      throw new Error("Cannot create property from empty object.");
+      throw new Error( "Cannot create property from empty object." );
     }
 
   }
@@ -926,16 +970,16 @@ var cls = (function () {
    * @param   {[type]} declarations [description]
    * @returns {[type]} [description]
    */
-  function defaultClassType(classId, name, value, classProperties, declarations, className) {
+  function defaultClassType( classId, name, value, classProperties, declarations, className ) {
 
-    var data = classProperties[name] ? classProperties[name] : {};
+    var data = classProperties[ name ] ? classProperties[ name ] : {};
 
-    if(!cls.isDef(data.classId))data.classId = classId;
-    if(!cls.isDef(data.value))data.value = value;
-    if (cls.isDef(declarations))data.declarations = declarations;
-    checkClassProperty(data,className,name);
+    if ( !_isDef( data.classId ) ) data.classId = classId;
+    if ( !_isDef( data.value ) ) data.value = value;
+    if ( _isDef( declarations ) ) data.declarations = declarations;
+    checkClassProperty( data, className, name );
     //only if there is no value already
-    if(!cls.isDef(classProperties[name]))classProperties[name] = data;
+    if ( !_isDef( classProperties[ name ] ) ) classProperties[ name ] = data;
   }
 
   /**
@@ -947,38 +991,36 @@ var cls = (function () {
    * @param   {[type]} classProperties [description]
    * @returns {[type]} [description]
    */
-  cls.classPropertiesFromFunction = function (className, source, classId, classProperties) {
+  function classPropertiesFromFunction( className, sourceObject, classId, classProperties ) {
 
-    var objStr = '',
+    var objStr = sourceObject.str,
       result = {},
-      obj = {},
+      obj = sourceObject.obj,
       name = '';
 
 
     // !IMPORTANT    -------    here properties are set if they have commentBlock
     // if some property doesnt haver coment block then it is created below in foreach
 
-    cls.getCommentBlocks(source, className, classId, classProperties);
+    getCommentBlocks( sourceObject, className, classId, classProperties );
 
 
-
-    obj = source();
 
     // setting up property.value and default parameters if needed
-    forEach(obj,function (value, name) {
-      defaultClassType(classId, name, value, classProperties,undefined,className);
+    forEach( obj, function ( value, name ) {
+      defaultClassType( classId, name, value, classProperties, undefined, className );
 
       // if this is my property then i can add it, even if it already exists - created by getCommentBlocks
       // it is mine and i can do whatever i want - this is class from function
       // so there is no way to override object properties now
-      if( classProperties[ name ].classId === classId){
-        classProperties[name].value = value;
-      }else{
-        if( canOverride(classProperties,name,classId)){
-          classProperties[name].value = value;
+      if ( classProperties[ name ].classId === classId ) {
+        classProperties[ name ].value = value;
+      } else {
+        if ( canOverride( classProperties, name, classId ) ) {
+          classProperties[ name ].value = value;
         }
       }
-    });
+    } );
     return classProperties;
   };
 
@@ -991,21 +1033,22 @@ var cls = (function () {
    * @param   {string}    classId         [description]
    * @returns {boolean}                   [description]
    */
-  function canOverride(classProperties, propertyName,classId){
+  function canOverride( classProperties, propertyName, classId ) {
     var result = true;
-    if( !cls.type(classProperties) === 'object' ){
-      throw new Error("Wrong class properties object.");
+    if ( !_type( classProperties ) === 'object' ) {
+      throw new Error( "Wrong class properties object." );
     }
-    if( !cls.isDef( classProperties[ propertyName ]) ){
+    if ( !_isDef( classProperties[ propertyName ] ) ) {
       return true;
-    }else{
+    } else {
 
-        if( cls.isType( classProperties[propertyName], 'final') || cls.isType( classProperties[propertyName],'const') ){
-            throw new Error("Cannot override '"+propertyName+"'.");
-          return false;
-        }else{
-          return true;
-        }
+      if ( _isType( classProperties[ propertyName ], 'final' ) || _isType( classProperties[ propertyName ],
+          'const' ) ) {
+        throw new Error( "Cannot override '" + propertyName + "'." );
+        return false;
+      } else {
+        return true;
+      }
     }
   }
 
@@ -1018,15 +1061,15 @@ var cls = (function () {
    * @param   {[type]} data [description]
    * @returns {[type]} [description]
    */
-  cls.addToClassProperties = function (classProperties, name, data) {
+  function addToClassProperties( classProperties, name, data ) {
     // TODO creating classes from object not TESTED!! can have a lot of bugs!!!
     var classId = data.classId;
-    var obj = getObject(classId);
+    var obj = getObject( classId );
     var facade = obj.classFacade;
     var className = facade.getClassName();
-    if( canOverride(classProperties,name,data.classId) ){
-      checkClassProperty(data, className, name);
-      classProperties[name] = data;
+    if ( canOverride( classProperties, name, data.classId ) ) {
+      checkClassProperty( data, className, name );
+      classProperties[ name ] = data;
     }
   };
 
@@ -1039,11 +1082,11 @@ var cls = (function () {
    * @param   {[type]} classProperties [description]
    * @returns {[type]} [description]
    */
-  cls.classPropertiesFromObject = function (className, source, classId, classProperties) {
+  function classPropertiesFromObject( className, source, classId, classProperties ) {
 
-    forEach(source,function (val, name) {
-      cls.addToClassProperties(classProperties, name, val);
-    });
+    forEach( source, function ( val, name ) {
+      addToClassProperties( classProperties, name, val );
+    } );
     return classProperties;
   };
 
@@ -1056,17 +1099,17 @@ var cls = (function () {
    * @param   {[type]} classProperties [description]
    * @returns {[type]} [description]
    */
-  cls.generateClassProperties = function generateClassProperties(className, source, classId, classProperties) {
+  function generateClassProperties( className, sourceObject, classId, classProperties ) {
 
-    if (!cls.isDef(classProperties)) {
+    if ( !_isDef( classProperties ) ) {
       //console.log("\n\n",'creating new classProperties',"\n\n");
-      classProperties = new cls.clsClassProperties();
+      classProperties = new clsClassProperties();
     }
 
-    if (cls.type(source) === 'function') {
-      cls.classPropertiesFromFunction(className, source, classId, classProperties);
-    } else if (cls.type(source) === 'object') {
-      cls.classPropertiesFromObject(className, source, classId, classProperties);
+    if ( _type( sourceObject.source ) === 'function' ) {
+      classPropertiesFromFunction( className, sourceObject, classId, classProperties );
+    } else if ( _type( sourceObject.source ) === 'object' ) {
+      classPropertiesFromObject( className, sourceObject.object, classId, classProperties );
     }
 
     return classProperties;
@@ -1079,11 +1122,11 @@ var cls = (function () {
    * @param   {[type]} declaration [description]
    * @returns {[type]} [description]
    */
-  cls.typeIs = function typeIs(type, declaration) {
-    var index = type.declarations.indexOf(declaration);
+  function _typeIs( type, declaration ) {
+    var index = type.declarations.indexOf( declaration );
     return index >= 0;
   };
-  cls.isType = cls.typeIs;
+  _isType = _typeIs;
   /**
    * classInstance constructor - instance is an outside world object
    * @method  clsClassInstance
@@ -1093,11 +1136,11 @@ var cls = (function () {
    * @param   {[type]} mixedWith [description]
    * @returns {[type]} [description]
    */
-  cls.clsClassInstance = function classInstance(classId, className, childOf, mixedWith) {
+  function clsClassInstance( classId, className, childOf, mixedWith ) {
 
-    this.getClassId = getClassId.bind(this,classId);
-    this.getCurrentClassName = getCurrentClassName.bind(this,className);
-    this.getClassName = getClassName.bind(this,classId);
+    this.getClassId = getClassId.bind( this, classId );
+    this.getCurrentClassName = getCurrentClassName.bind( this, className );
+    this.getClassName = getClassName.bind( this, classId );
 
     this.childOf = childOf ? childOf : [];
     this.mixedWith = mixedWith ? mixedWith : [];
@@ -1112,66 +1155,68 @@ var cls = (function () {
    * @param   {[type]} propertyName [description]
    * @returns {[type]} [description]
    */
-  cls.clsClassInstance.prototype.addPublicProperty = function (propertyName) {
+  clsClassInstance.prototype.addPublicProperty = function ( propertyName ) {
     var classId = this.getClassId();
     var className = this.getCurrentClassName();
     var self = this;
-    var classObject = __allClasses[classId];
+    var classObject = __allClasses[ classId ];
     var classProperties = classObject.classProperties;
     var classData = classObject.classData;
 
-    if (!classProperties.propertyExists(propertyName)) {
-      throw new Error("'" + propertyName + "' doesn't exists");
+    if ( !classProperties.propertyExists( propertyName ) ) {
+      throw new Error( "'" + propertyName + "' doesn't exists" );
     }
 
     // property declaration must exists here so
-    if (classProperties[propertyName].declarations.indexOf('public') === -1) {
-      throw new Error("'" + propertyName + "' is not public property and cannot be added to instance.");
+    if ( classProperties[ propertyName ].declarations.indexOf( 'public' ) === -1 ) {
+      throw new Error( "'" + propertyName + "' is not public property and cannot be added to instance." );
     }
 
-    if (!cls.isDef(self[propertyName])) {
-      Object.defineProperty(self, propertyName, {
+    if ( !_isDef( self[ propertyName ] ) ) {
+      Object.defineProperty( self, propertyName, {
         enumerable: true,
         get: function () {
-          return classData.get(classId, propertyName);
+          return classData.get( classId, propertyName );
         },
-        set: function( newValue ){
-          return classData.set(classId, className, propertyName, newValue);
+        set: function ( newValue ) {
+          return classData.set( classId, className, propertyName, newValue );
         }
-      });
+      } );
     }
   };
+
+
 
   /**
    * classProperties constructor
    * @method  clsClassProperties
    * @returns {[type]} [description]
    */
-  cls.clsClassProperties = function classProperties() {
+  function clsClassProperties() {
 
   };
 
-  cls.clsClassProperties.prototype.propertyExists = function (propertyName) {
-    return cls.isDef(this[propertyName]);
+  clsClassProperties.prototype.propertyExists = function ( propertyName ) {
+    return _isDef( this[ propertyName ] );
   };
 
-  function getClassId(classId) {
+  function getClassId( classId ) {
     return classId;
   }
 
-  function getCurrentClassName(className) {
+  function getCurrentClassName( className ) {
     return className;
   }
 
-  function getClassName(classId){
+  function getClassName( classId ) {
 
-    var obj = getObject(classId);
+    var obj = getObject( classId );
     var facade = obj.classFacade;
     var child = facade.child;
 
     //console.log("--getting class child",child);
 
-    while( child !== '' ){
+    while ( child !== '' ) {
       //console.log("Getting clasName for child",child);
       obj = getObject( child );
       facade = obj.classFacade;
@@ -1191,11 +1236,11 @@ var cls = (function () {
    * @param   {[type]} mixedWith [description]
    * @returns {[type]} [description]
    */
-  cls.clsClassFacade = function classFacade(classId, className) {
+  function clsClassFacade( classId, className ) {
 
-    this.getClassId = getClassId.bind(this,classId);
-    this.getCurrentClassName = getCurrentClassName.bind(this,className);
-    this.getClassName = getClassName.bind(this,classId);
+    this.getClassId = getClassId.bind( this, classId );
+    this.getCurrentClassName = getCurrentClassName.bind( this, className );
+    this.getClassName = getClassName.bind( this, classId );
     this.mixedWith = [];
     this.child = '';
     this.parent = '';
@@ -1210,41 +1255,42 @@ var cls = (function () {
    * @param   {[type]} data [description]
    * @returns {[type]} [description]
    */
-  cls.clsClassFacade.prototype.addProperty = function (propertyName, data, addToClassProperties, classId, inhertiance) {
+  clsClassFacade.prototype.addProperty = function ( propertyName, data, addToClassProperties, classId,
+    inhertiance ) {
 
-    if (!cls.isDef(classId)) {
+    if ( !_isDef( classId ) ) {
       classId = this.getClassId();
     }
     //console.log('facade.addProperty',classId);
     var className = this.getCurrentClassName();
-    var classObject = __allClasses[classId];
+    var classObject = __allClasses[ classId ];
     var classData = classObject.classData;
     var self = this;
 
-    if (!cls.isDef(addToClassProperties)) {
+    if ( !_isDef( addToClassProperties ) ) {
       addToClassProperties = false;
     }
-    if (addToClassProperties === true) {
-      cls.addToClassProperties(classObject.classProperties, propertyName, data);
+    if ( addToClassProperties === true ) {
+      addToClassProperties( classObject.classProperties, propertyName, data );
     }
 
-    checkPropertyType(classId,className,data.value,propertyName);
+    checkPropertyType( classId, className, data.value, propertyName );
 
-    if (!cls.isDef(self[propertyName])) {
+    if ( !_isDef( self[ propertyName ] ) ) {
       // from now we can only set properties through setter - we cannot defineProoperty that is already defined
-      Object.defineProperty(self, propertyName, {
+      Object.defineProperty( self, propertyName, {
         enumerable: true,
         get: function () {
-          return classData.get(classId, propertyName);
+          return classData.get( classId, propertyName );
         },
-        set: function (newVal) {
-          return classData.set(classId, className,propertyName, newVal);
+        set: function ( newVal ) {
+          return classData.set( classId, className, propertyName, newVal );
         }
-      });
-    }else if(data.value !== classObject.classProperties[ propertyName ].value){
+      } );
+    } else if ( data.value !== classObject.classProperties[ propertyName ].value ) {
       // it means that we are creating new value
       // if there is property we must check if we can override it
-      if(canOverride(classObject.classProperties,propertyName,classId)){
+      if ( canOverride( classObject.classProperties, propertyName, classId ) ) {
         self[ propertyName ] = data.value;
       }
     }
@@ -1259,7 +1305,7 @@ var cls = (function () {
    * @param   {[type]} classProperties [description]
    * @returns {[type]} [description]
    */
-  cls.clsClassData = function classData(classProperties) {
+  function clsClassData( classProperties ) {
     this.classFacades = {}; // key->value by classId
     this.classProperties = classProperties;
   };
@@ -1270,8 +1316,8 @@ var cls = (function () {
    * @param  {[type]} classId [description]
    * @param  {[type]} classFacade [description]
    */
-  cls.clsClassData.prototype.addClassFacade = function addClassFacade(classId, classFacade) {
-    this.classFacades[classId] = classFacade;
+  clsClassData.prototype.addClassFacade = function addClassFacade( classId, classFacade ) {
+    this.classFacades[ classId ] = classFacade;
   };
 
   /**
@@ -1280,8 +1326,8 @@ var cls = (function () {
    * @param   {[type]} propertyName [description]
    * @returns {[type]} [description]
    */
-  cls.clsClassData.prototype.propertyExists = function propertyExists(propertyName) {
-    return cls.isDef(this.classProperties) && cls.isDef(this.classProperties[propertyName]);
+  clsClassData.prototype.propertyExists = function propertyExists( propertyName ) {
+    return _isDef( this.classProperties ) && _isDef( this.classProperties[ propertyName ] );
   };
 
   /**
@@ -1291,26 +1337,26 @@ var cls = (function () {
    * @param   {[type]} propertyName [description]
    * @returns {[type]} [description]
    */
-  cls.clsClassData.prototype.mixedWithOrChildOfPropertyOwner = function (classId, propertyName) {
+  clsClassData.prototype.mixedWithOrChildOfPropertyOwner = function ( classId, propertyName ) {
 
-    var facade = this.classFacades[classId];
-    var property = this.classProperties[propertyName];
+    var facade = this.classFacades[ classId ];
+    var property = this.classProperties[ propertyName ];
 
-    if (classId === facade.getClassId()) {
+    if ( classId === facade.getClassId() ) {
       return true;
     }
-    if (facade.mixedWith.indexOf(property.classId)) {
+    if ( facade.mixedWith.indexOf( property.classId ) ) {
       return true;
     }
-    if (facade.inherits.indexOf(property.classId)) {
+    if ( facade.inherits.indexOf( property.classId ) ) {
       return true;
     }
 
     return false;
   };
 
-  function getName(classId) {
-    var obj = getObject(classId);
+  function getName( classId ) {
+    var obj = getObject( classId );
     return obj.classFacade.getCurrentClassName();
   }
 
@@ -1325,72 +1371,74 @@ var cls = (function () {
    * @param   {[type]} propertyName [description]
    * @returns {[type]} [description]
    */
-  cls.clsClassData.prototype.get = function get(classId, propertyName) {
-    var className = getName(classId);
-    if (!this.propertyExists(propertyName)) {
-      throw new Error("There is no property like " + propertyName + " in " + className);
+  clsClassData.prototype.get = function get( classId, propertyName ) {
+    var className = getName( classId );
+    if ( !this.propertyExists( propertyName ) ) {
+      throw new Error( "There is no property like " + propertyName + " in " + className );
     }
-    var result = this.classProperties[propertyName];
+    var property = this.classProperties[ propertyName ];
     //console.log('getting', propertyName, 'from', className, classId);
 
-    if (cls.isDef(result)) {
+    if ( _isDef( property ) ) {
 
       // this is only way to get real data
-      if (result.classId === classId) {
+      if ( property.classId === classId ) {
 
-        //console.log(className, 'is owner of', propertyName, 'property of type', cls.type(result.value));
+        //console.log(className, 'is owner of', propertyName, 'property of type', _type(result.value));
         // if its mine property i can get it no matter what
-        if (cls.type(result.value) === 'function') {
+        if ( _type( property.value ) === 'function' ) {
 
-          var facade = this.classFacades[classId];
-          var obj = getObject(classId);
+          var facade = this.classFacades[ classId ];
+          var obj = getObject( classId );
           //return result.value.bind(facade);
-          return function preMethod(){
+          return function preMethod() {
             var _args = arguments;
-            _args = checkMethodArgTypes(  obj , propertyName, _args );
-            return result.value.apply(facade,_args);
+            _args = checkMethodArgTypes( obj, propertyName, _args );
+            var result = property.value.apply( facade, _args );
+            checkReturnValue( classId, propertyName, result );
+            return result;
           }
 
         } else {
-          return result.value;
+          return property.value;
         }
 
 
 
-      } else if (cls.typeIs(result, 'public')) {
+      } else if ( _typeIs( property, 'public' ) ) {
 
         // if its public property i can get it
         // binding to myself because i should have all properties even
         // private of parents but i cannot access it directly
-        var targetName = getName(result.classId);
+        var targetName = getName( property.classId );
         //console.log('redirecting to', targetName, result.classId, 'who has this property', propertyName);
-        return this.get(result.classId, propertyName);
+        return this.get( property.classId, propertyName );
 
-      } else if (cls.isDef(classId) &&
-        cls.typeIs(result, 'protected') &&
-        this.mixedWithOrChildOfPropertyOwner(classId, propertyName)) {
+      } else if ( _isDef( classId ) &&
+        _typeIs( property, 'protected' ) &&
+        this.mixedWithOrChildOfPropertyOwner( classId, propertyName ) ) {
 
 
         // if its protected property and i can
         // access it becase i'm neighbor or child
-        var targetName = getName(result.classId);
+        var targetName = getName( property.classId );
         //console.log(targetName, 'is mixed with or child of', className);
-        return this.get(result.classId, propertyName);
+        return this.get( property.classId, propertyName );
 
 
-      } else if (cls.isDef(classId) && cls.typeIs(result, 'private')) {
+      } else if ( _isDef( classId ) && _typeIs( property, 'private' ) ) {
 
         //console.log('classId:', classId, 'result.classId:', result.classId);
         //console.log('this facade', classId);
         //console.log('result facade', getName(result.classId), result.classId);
         //console.log('are we extending?', this.classFacades[classId].extends === result.classId);
-        throw new Error("Cannot access private properties of other classes.");
+        throw new Error( "Cannot access private properties of other classes." );
 
 
       } else {
 
         //console.log('classId', classId, 'result.classId', result.classId);
-        throw new Error("Cannot access '" + propertyName + "' from outside a class.");
+        throw new Error( "Cannot access '" + propertyName + "' from outside a class." );
 
 
       }
@@ -1401,46 +1449,51 @@ var cls = (function () {
   };
 
 
-  function getClassNameOf(classId){
-    var obj = getObject(classId);
+  function getClassNameOf( classId ) {
+    var obj = getObject( classId );
     return obj.classFacade.getCurrentClassName();
   }
 
-  function getClassNamesOf(classesIds){
+  function getClassNamesOf( classesIds ) {
     var result = [];
-    forEach(classesIds,function(classId){
-      result.push( getClassNameOf(classId) );
-    });
+    forEach( classesIds, function ( classId ) {
+      result.push( getClassNameOf( classId ) );
+    } );
     return result;
   }
 
-  function canBeClass(instance,shouldBe,className,propertyName){
+  function canBeClass( instance, shouldBe, className, propertyName ) {
 
     var valueType = instance.getClassName();
-    console.log("canBeClass",propertyName,shouldBe,'is',valueType);
+    console.log( "canBeClass", propertyName, shouldBe, 'is', valueType );
 
-    if( shouldBe.indexOf('anytype') >= 0 ){ return true; }
-    if( shouldBe.indexOf(valueType) >= 0 ){ return true; }
+    if ( shouldBe.indexOf( 'anytype' ) >= 0 ) {
+      return true;
+    }
+    if ( shouldBe.indexOf( valueType ) >= 0 ) {
+      return true;
+    }
 
     valueClassId = instance.getClassId();
 
     // if we inherite from class that we declared everything is ok
-    valueObj = getObject(valueClassId);
+    valueObj = getObject( valueClassId );
     valueFacade = valueObj.classFacade;
     valueInherits = valueFacade.inherits;
-    valueClassNames = getClassNamesOf(valueInherits);
+    valueClassNames = getClassNamesOf( valueInherits );
 
-    for( key in shouldBe ){
-      var name = shouldBe[key];
-      if(valueClassNames.indexOf(name) >= 0){
+    for ( key in shouldBe ) {
+      var name = shouldBe[ key ];
+      if ( valueClassNames.indexOf( name ) >= 0 ) {
         return true;
       }
     }
-    classTypeError(className,propertyName,valueType,shouldBe);
+    classTypeError( className, propertyName, valueType, shouldBe );
   }
 
-  function classTypeError(className,propertyName,valueType,shouldBe){
-    throw new Error("Value of [ "+propertyName+" ] in [ "+className+" ] class does not match declaration.\nExpected: '"+shouldBe+"' given: '"+valueType+"'.");
+  function classTypeError( className, propertyName, valueType, shouldBe ) {
+    throw new Error( "Value of [ " + propertyName + " ] in [ " + className +
+      " ] class does not match declaration.\nExpected: '" + shouldBe + "' given: '" + valueType + "'." );
   }
 
   /**
@@ -1451,63 +1504,70 @@ var cls = (function () {
    * @param   {[type]}          propertyName [description]
    * @returns {[type]}                       [description]
    */
-  function checkPropertyType(classId,className,value,propertyName){
+  function checkPropertyType( classId, className, value, propertyName ) {
 
-    var obj = getObject(classId);
+    var obj = getObject( classId );
     var shouldBe = obj.classProperties[ propertyName ].types;
-    var valueType = cls.type(value);
+    var valueType = _type( value );
     var valueClassId = '';
-    var valueObj,valueFacade,valueInherits,valueClassNames;
+    var valueObj, valueFacade, valueInherits, valueClassNames;
 
-    if( shouldBe.indexOf( valueType )>=0 ){ return true; }
-    if( shouldBe.indexOf('anytype') >= 0 ){ return true; }
+    if ( shouldBe.indexOf( valueType ) >= 0 ) {
+      return true;
+    }
+    if ( shouldBe.indexOf( 'anytype' ) >= 0 ) {
+      return true;
+    }
 
     // if given value is a classInstance then check className of that instance
-    if( valueType === 'classInstance' ){
+    if ( valueType === 'clsClassInstance' ) {
 
-      return canBeClass(value,shouldBe,className,propertyName);
+      return canBeClass( value, shouldBe, className, propertyName );
 
-    }else{
-      if( shouldBe.indexOf(valueType) >= 0 ){return true;}
+    } else {
+      if ( shouldBe.indexOf( valueType ) >= 0 ) {
+        return true;
+      }
     }
 
     // we are here so value is not correct
-    classTypeError(className,propertyName,valueType,shouldBe);
+    classTypeError( className, propertyName, valueType, shouldBe );
   }
 
-  cls.clsClassData.prototype.set = function set(classId, className, propertyName, value) {
+  clsClassData.prototype.set = function set( classId, className, propertyName, value ) {
     //console.log('classData.set',propertyName);
-    var obj = getObject(classId);
+    var obj = getObject( classId );
     var propertyClassId = obj.classProperties[ propertyName ].classId;
     var facade = obj.classFacade;
-    var propertyObject = getObject(propertyClassId);
+    var propertyObject = getObject( propertyClassId );
     var propertyFacade = propertyObject.classFacade;
     var property = obj.classProperties[ propertyName ];
 
-    if( cls.type( property.value ) === 'function' ){
-      if( cls.isType( property,'final' ) ){
-        throw new Error("Method '"+propertyName+"' is declared as final and cannot be changed.");
+    if ( _type( property.value ) === 'function' ) {
+      if ( _isType( property, 'final' ) ) {
+        throw new Error( "Method '" + propertyName + "' is declared as final and cannot be changed." );
       }
-    }else{
-      if( cls.isType(property,'const') ){
-        throw new Error("Property '"+propertyName+"' is declared as const and cannot be changed.");
+    } else {
+      if ( _isType( property, 'const' ) ) {
+        throw new Error( "Property '" + propertyName + "' is declared as const and cannot be changed." );
       }
     }
 
-    checkPropertyType(classId,className,value,propertyName);
+    checkPropertyType( classId, className, value, propertyName );
 
-    if( classId === propertyClassId){
+    if ( classId === propertyClassId ) {
       //console.log("SET: it is my property");
       obj.classProperties[ propertyName ].value = value;
-    }else if(facade.inherits.indexOf( propertyClassId ) !== -1){
-      console.log("i inherit from property");
+    } else if ( facade.inherits.indexOf( propertyClassId ) !== -1 ) {
+      console.log( "i inherit from property" );
       obj.classProperties[ propertyName ].value = value;
-    }else{
-      console.log("propertyClassId",propertyClassId,"classID",classId);
-      console.log("facade inherits",facade.inherits);
-      console.log("class name",facade.getCurrentClassName());
-      console.log("property className",propertyFacade.getCurrentClassName());
-      throw new Error("Cannot change property '"+propertyName+"' only child classes can redefine properties.");
+    } else {
+      console.log( "propertyClassId", propertyClassId, "classID", classId );
+      console.log( "facade inherits", facade.inherits );
+      console.log( "class name", facade.getCurrentClassName() );
+      console.log( "property className", propertyFacade.getCurrentClassName() );
+      throw new Error( "Cannot change property '" + propertyName +
+        "' only child classes can redefine properties." );
     }
 
   };
@@ -1521,26 +1581,26 @@ var cls = (function () {
    * @param   {classInstance}   instance
    * @returns {undefined}
    */
-  function fireConstructor(instance,args){
-    if( !Array.isArray(args)){
-      args = Array.prototype.slice.call(args);
+  function fireConstructor( instance, args ) {
+    if ( !Array.isArray( args ) ) {
+      args = Array.prototype.slice.call( args );
     }
-    var facade = getFacadeOfInstance(instance);
+    var facade = getFacadeOfInstance( instance );
     var classId = facade.getClassId();
-    var obj = getObject(classId);
+    var obj = getObject( classId );
     var className = facade.getCurrentClassName();
 
     // if we have constructor we can fire it because if we are here it means that instance is createNested
     // if we are collecting classes to extend no constructor will fire only when new instance is created
     // constructor will fire it - when all classes are prepared and ready to instantiate
-    if( cls.isDef( facade[className] ) &&  obj.classProperties[className].classId === classId ){
-      facade[className].apply(facade,args);
-    }else if(facade.parent !== ''){
+    if ( _isDef( facade[ className ] ) && obj.classProperties[ className ].classId === classId ) {
+      facade[ className ].apply( facade, args );
+    } else if ( facade.parent !== '' ) {
       classId = facade.parent;
-      obj = getObject(classId);
+      obj = getObject( classId );
       instance = obj.classInstance;
       facade = obj.classFacade;
-      fireConstructor(instance,args);
+      fireConstructor( instance, args );
     }
   }
 
@@ -1550,36 +1610,36 @@ var cls = (function () {
    * @param  {object} source              [description]
    * @return {classConstructor}           [description]
    */
-  cls.class = function (className, source) {
+  cls.class = function ( className, source ) {
 
     var sourceType = '',
       nameType = '';
 
-    if (!cls.isDef(className) && !cls.isDef(source)) {
-      throw new Error("There is no source for class creation.");
+    if ( !_isDef( className ) && !_isDef( source ) ) {
+      throw new Error( "There is no source for class creation." );
     }
 
-    nameType = cls.type(className);
+    nameType = _type( className );
 
-    if (nameType === 'function' || nameType === 'classConstructor') {
-      if (cls.isDef(className.isConstructor)) {
+    if ( nameType === 'function' || nameType === 'classConstructor' ) {
+      if ( _isDef( className.isConstructor ) ) {
         return className;
       }
     }
 
-    if (nameType !== 'string') {
-      throw new Error("class name should be a string");
+    if ( nameType !== 'string' ) {
+      throw new Error( "class name should be a string" );
     }
 
-    sourceType = cls.type(source);
+    sourceType = _type( source );
 
-    if (sourceType !== 'function' && sourceType !== 'object') {
-      throw new Error("Source for class creation must be a function or specially prepared object.");
+    if ( sourceType !== 'function' && sourceType !== 'object' ) {
+      throw new Error( "Source for class creation must be a function or specially prepared object." );
     }
 
     var classConstructor = function classConstructor() {
       var args = arguments;
-      var instance = cls.create(className, source);
+      var instance = cls.create( className, source );
       fireConstructor( instance, args );
       return instance;
     }
@@ -1588,7 +1648,7 @@ var cls = (function () {
     classConstructor.___className = className;
     classConstructor.___arguments = arguments;
     classConstructor.isConstructor = true;
-    classConstructor.extend = constructorExtend.bind(classConstructor);
+    classConstructor.extend = constructorExtend.bind( classConstructor );
 
     return classConstructor;
   }
@@ -1601,27 +1661,28 @@ var cls = (function () {
    * @param   {[type]}     instance [description]
    * @returns {[type]}              [description]
    */
-  function lockProperty(name,instance){
+  function lockProperty( name, instance ) {
 
-    var obj = getObject(instance.getClassId());
+    var obj = getObject( instance.getClassId() );
     var classProperties = obj.classProperties;
     var property;
     var className;
 
-    if(cls.isDef( classProperties[ name ] )){
+    if ( _isDef( classProperties[ name ] ) ) {
 
       property = classProperties[ name ];
-      if( property.declarations.indexOf('public') === -1 ){
-        Object.defineProperty(instance,name,{
-          configureable:false,
-          get:function(){
-            throw new Error("Property '"+name+"' is not public.");
+      if ( property.declarations.indexOf( 'public' ) === -1 ) {
+        Object.defineProperty( instance, name, {
+          configureable: false,
+          enumerable: false,
+          get: function () {
+            throw new Error( "Property '" + name + "' is not public." );
           }
-        });
+        } );
       }
 
-    }else{
-      throw new Error("Internal error: Wrong property name.");
+    } else {
+      throw new Error( "Internal error: Wrong property name." );
     }
 
   }
@@ -1633,40 +1694,49 @@ var cls = (function () {
    * @param   {[type]} source [description]
    * @returns {[type]} [description]
    */
-  function _create(className, source, classProperties, classData) {
+  function _create( className, source, classProperties, classData ) {
 
-    var classId = cls.guid(), // new classId for each class
+    var classId = _guid(), // new classId for each class
       classInstance = {},
       classFacade = {},
       publicProperties = {},
       result = {},
-      obj = {};
+      obj = {},
+      str = '',
+      sourceObject;
 
-    if (cls.type(className) !== 'string') {
-      throw new Error("className should be a string "+cls.type(className)+" given.");
+    if ( _type( className ) !== 'string' ) {
+      throw new Error( "className should be a string " + _type( className ) + " given." );
     }
 
-    if (cls.isDef(source.___source)) {
+    if ( _isDef( source.___source ) ) {
       //console.log('getting source from',source);
       source = source.___source;
     }
 
-    if (cls.type(source) === 'function') {
+    if ( _type( source ) === 'function' ) {
       obj = source();
     }
 
-    if (!cls.isDef(classProperties)) {
-      classProperties = new cls.clsClassProperties();
+    if ( !_isDef( classProperties ) ) {
+      classProperties = new clsClassProperties();
     }
 
-    cls.generateClassProperties(className, source, classId, classProperties);
+    str = source.toString();
+    sourceObject = {
+      'source': source,
+      'str': str,
+      'obj': obj
+    };
+
+    generateClassProperties( className, sourceObject, classId, classProperties );
     //console.log('generated classProperties',classProperties);
-    if (!cls.isDef(classData)) {
-      classData = new cls.clsClassData(classProperties);
+    if ( !_isDef( classData ) ) {
+      classData = new clsClassData( classProperties );
     } // we don't need to assign properties to classData because classData is searching in classProperties
 
-    classFacade = new cls.clsClassFacade(classId, className);
-    publicProperties = cls.getClassPropertiesOf(classProperties, 'public', classId);
+    classFacade = new clsClassFacade( classId, className );
+    publicProperties = getClassPropertiesOf( classProperties, 'public', classId );
 
     // if there are two extending classes then there is a third one
     // that is extending second one and have all properties of two
@@ -1683,54 +1753,56 @@ var cls = (function () {
     result.classFacade = classFacade;
     result.classData = classData;
     result.publicProperties = publicProperties;
-    setObject(classId, result);
+    setObject( classId, result );
 
-    classInstance = new cls.clsClassInstance(classId, className);
+    classInstance = new clsClassInstance( classId, className );
     classInstance.constructor.name = className;
     result.classInstance = classInstance;
 
-    forEach(classProperties,function (val, name) {
-      lockProperty(name,classInstance);
-      if (val.classId === classFacade.getClassId()) {
-        if( !cls.isDef( classFacade[ name ]) ){
-          classFacade.addProperty(name, val, false);
+    forEach( classProperties, function ( val, name ) {
+      lockProperty( name, classInstance );
+      if ( val.classId === classFacade.getClassId() ) {
+        if ( !_isDef( classFacade[ name ] ) ) {
+          classFacade.addProperty( name, val, false );
         }
       }
-    });
-    classData.addClassFacade(classId, classFacade);
+    } );
+    classData.addClassFacade( classId, classFacade );
 
 
-    forEach(publicProperties,function (val, name) {
-      classInstance.addPublicProperty(name);
-    });
+    forEach( publicProperties, function ( val, name ) {
+      classInstance.addPublicProperty( name );
+    } );
+
+    //console.log( "there is", Object.keys( __allClasses ).length, "classes created" );
     return classInstance;
   };
 
 
-  cls.create = function create(className, source) {
-    return _create(className, source);
+  cls.create = function create( className, source ) {
+    return _create( className, source );
   }
 
-  function getObject(classId) {
-    return __allClasses[classId];
+  function getObject( classId ) {
+    return __allClasses[ classId ];
   }
 
-  function setObject(classId, result) {
-    __allClasses[classId] = result;
+  function setObject( classId, result ) {
+    __allClasses[ classId ] = result;
   }
 
 
-  function getClassObjectOfInstance(instance) {
+  function getClassObjectOfInstance( instance ) {
     var classId = instance.getClassId();
-    var classObject = getObject(classId);
+    var classObject = getObject( classId );
     return classObject;
   }
 
   var getClassObjectOfFacade = getClassObjectOfInstance;
 
-  function getFacadeOfInstance(instance) {
+  function getFacadeOfInstance( instance ) {
     var classId = instance.getClassId();
-    var classObject = getObject(classId);
+    var classObject = getObject( classId );
     return classObject.classFacade;
   }
 
@@ -1739,19 +1811,19 @@ var cls = (function () {
    * @param  {array} instances  array of classId
    * @return {[type]}           [description]
    */
-  function _instanceInherits(instance) {
+  function _instanceInherits( instance ) {
     var allChilds = [];
     // traverse all parents to the first class and collect classId
-    var object = getClassObjectOfInstance(instance);
+    var object = getClassObjectOfInstance( instance );
     var facade = object.classFacade;
     var fuse = 1000;
-    while (facade.parent !== '' && fuse >= 0) {
-      if (facade.parent !== '') {
-        object = getObject(facade.parent);
+    while ( facade.parent !== '' && fuse >= 0 ) {
+      if ( facade.parent !== '' ) {
+        object = getObject( facade.parent );
         facade = object.classFacade;
       }
       var classId = facade.getClassId();
-      allChilds.push(classId);
+      allChilds.push( classId );
       fuse--;
     }
     return allChilds;
@@ -1765,9 +1837,9 @@ var cls = (function () {
    * @param   {array} classesToExtend to extend, instead of array you can use argument list class1,class2,class3...
    * @returns {Object} extended Class
    */
-  function _extend(firstClass, secondClass, classProperties, classData) {
+  function _extend( firstClass, secondClass, classProperties, classData ) {
 
-    var args = Array.prototype.slice.call(arguments),
+    var args = Array.prototype.slice.call( arguments ),
       classes = [],
       instances = [],
       instance = {},
@@ -1781,26 +1853,27 @@ var cls = (function () {
       firstClassFacade = {},
       mixedWith = [];
 
-    if (!cls.isDef(classProperties)) {
-      classProperties = new cls.clsClassProperties();
-      classData = new cls.clsClassData(classProperties);
+    if ( !_isDef( classProperties ) ) {
+      classProperties = new clsClassProperties();
+      classData = new clsClassData( classProperties );
     }
 
-    if (firstClass.___type === 'class') {//simple class
-      firstClassInstance = _create(firstClass.___className, firstClass, classProperties, classData);
-    } else {//extended class
-      firstClassInstance = _extend(firstClass.___firstClass, firstClass.___secondClass, classProperties, classData);
+    if ( firstClass.___type === 'class' ) { //simple class
+      firstClassInstance = _create( firstClass.___className, firstClass, classProperties, classData );
+    } else { //extended class
+      firstClassInstance = _extend( firstClass.___firstClass, firstClass.___secondClass, classProperties, classData );
     }
-    firstClassFacade = getFacadeOfInstance(firstClassInstance);
+    firstClassFacade = getFacadeOfInstance( firstClassInstance );
 
-    if( secondClass.___type === 'class'){//simple class
-      secondClassInstance = _create(secondClass.___className, secondClass, classProperties, classData);
-    }else{//extended class
-      secondClassInstance = _extend(secondClass.___firstClass,secondClass.___secondClass,classProperties, classData);
+    if ( secondClass.___type === 'class' ) { //simple class
+      secondClassInstance = _create( secondClass.___className, secondClass, classProperties, classData );
+    } else { //extended class
+      secondClassInstance = _extend( secondClass.___firstClass, secondClass.___secondClass, classProperties,
+        classData );
     }
 
 
-    secondClassObject = __allClasses[secondClassInstance.getClassId()];
+    secondClassObject = __allClasses[ secondClassInstance.getClassId() ];
     secondClassFacade = secondClassObject.classFacade;
 
 
@@ -1812,7 +1885,7 @@ var cls = (function () {
     secondClassFacade.extend = firstClassInstance.getClassId();
     secondClassFacade.parent = firstClassInstance.getClassId();
     secondClassFacade.parentName = firstClassInstance.getCurrentClassName();
-    secondClassFacade.inherits = _instanceInherits(secondClassInstance);
+    secondClassFacade.inherits = _instanceInherits( secondClassInstance );
     secondClassFacade.child = '';
     var childId = secondClassFacade.getClassId();
     firstClassFacade.child = childId;
@@ -1821,56 +1894,56 @@ var cls = (function () {
     // we have facades with childOf array containing other classes
     // now we must mix properties in classProperties object so classData can access it and check
     var secondClassId = secondClassInstance.getClassId();
-    forEach(classProperties,function (val, key) {
+    forEach( classProperties, function ( val, key ) {
       // adding properties from parent classes
-      if (val.classId !== secondClassId) {
-        secondClassFacade.addProperty(key, val, false);
-        if (cls.typeIs(val, 'public')) {
-          secondClassInstance.addPublicProperty(key);
+      if ( val.classId !== secondClassId ) {
+        secondClassFacade.addProperty( key, val, false );
+        if ( _typeIs( val, 'public' ) ) {
+          secondClassInstance.addPublicProperty( key );
         }
       }
-    });
+    } );
 
     return secondClassInstance;
   };
 
 
   function arrayExtend( array ) {
-    var result = array[0];
-    forEach(array,function (val, i) {
-      if (i > 0) {
-        result = cls.extend(result, val);
+    var result = array[ 0 ];
+    forEach( array, function ( val, i ) {
+      if ( i > 0 ) {
+        result = cls.extend( result, val );
       }
-    });
+    } );
     return result;
   }
 
 
-  function constructorExtend(className, source) {
-    if( cls.type( className ) === 'string'){
-      var nextClass = cls.class(className, source);
-      return cls.extend(this, nextClass);
-    }else{
-      return cls.extend(this,className); //className is cls.class already
+  function constructorExtend( className, source ) {
+    if ( _type( className ) === 'string' ) {
+      var nextClass = cls.class( className, source );
+      return cls.extend( this, nextClass );
+    } else {
+      return cls.extend( this, className ); //className is cls.class already
     }
   }
 
 
-  cls.extend = function extend(firstClass, secondClass) {
+  cls.extend = function extend( firstClass, secondClass ) {
 
-    if (cls.type(firstClass) === 'array') {
-      return arrayExtend(firstClass);
+    if ( _type( firstClass ) === 'array' ) {
+      return arrayExtend( firstClass );
     }
 
-    var _args = Array.prototype.slice.call(arguments);
+    var _args = Array.prototype.slice.call( arguments );
     //throw new Error("yumi");
-    if( _args.length > 2 ){
-      return arrayExtend(_args);
+    if ( _args.length > 2 ) {
+      return arrayExtend( _args );
     }
 
     var classConstructor = function classConstructor() {
         var args = arguments;
-        var instance = _extend(firstClass, secondClass);
+        var instance = _extend( firstClass, secondClass );
         fireConstructor( instance, args );
         return instance;
       }
@@ -1881,57 +1954,59 @@ var cls = (function () {
     classConstructor.___arguments = arguments;
     classConstructor.___className = secondClass.___className;
     classConstructor.isConstructor = true;
-    classConstructor.extend = constructorExtend.bind(classConstructor);
+    classConstructor.extend = constructorExtend.bind( classConstructor );
     return classConstructor;
   }
 
 
-  cls.empty = function empty(className){
-    return cls.class(className,function(){ return {} });
+  cls.empty = function empty( className ) {
+    return cls.class( className, function () {
+      return {}
+    } );
   }
 
 
   cls._getAllFacades = function () {
     var facades = {};
-    forEach(__allClasses,function (val, classId) {
-      facades[val.classFacade.getCurrentClassName() + '_' + classId] = val.classFacade;
-    });
+    forEach( __allClasses, function ( val, classId ) {
+      facades[ val.classFacade.getCurrentClassName() + '_' + classId ] = val.classFacade;
+    } );
     return facades;
   }
 
-  cls.logParents = function (instance) {
+  cls.logParents = function ( instance ) {
     var classId = instance.getClassId();
     var className = instance.getCurrentName();
-    var classFacade = __allClasses[classId].classFacade;
+    var classFacade = __allClasses[ classId ].classFacade;
     var parent = classFacade.parent;
     var parentName = classFacade.parentName;
     //console.log(className + '_' + classId, 'have parent', parentName + '_' + parent);
     //console.log(' ->', className, 'inherits', classFacade.inherits);
-    if (parent !== '') {
-      cls.logParents(__allClasses[parent].classInstance);
+    if ( parent !== '' ) {
+      cls.logParents( __allClasses[ parent ].classInstance );
     }
   }
 
-  cls.childOf = function (instance) {
+  cls.childOf = function ( instance ) {
     var classId = instance.getClassId();
-    var classFacade = __allClasses[classId].classFacade;
+    var classFacade = __allClasses[ classId ].classFacade;
     //console.log(classFacade.getCurrentClassName(), 'inherits', classFacade.inherits);
   }
 
   cls.logProperties = function () {
-    forEach(__allClasses,function (obj, classId) {
+    forEach( __allClasses, function ( obj, classId ) {
       var props = obj.classProperties;
       var facade = obj.classFacade;
       //console.log('#class', facade.getCurrentClassName(), facade.getClassId(), 'have properties:');
-      forEach(props,function (val, name) {
+      forEach( props, function ( val, name ) {
         //console.log('  ', name, 'with id', val.classId);
-      });
-    });
+      } );
+    } );
   }
 
   return cls;
-}());
+}() );
 
-if (typeof module !== 'undefined') {
+if ( typeof module !== 'undefined' ) {
   module.exports = cls;
 }
