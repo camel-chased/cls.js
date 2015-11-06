@@ -99,17 +99,12 @@ var cls = ( function () {
       return o;
     }
 
-    keys = Object.keys( o );
-    len = keys.length;
 
     if ( _type( o ) === 'array' ) {
       clone = [];
     }
 
-    for ( ; i < len; i++ ) {
-      key = keys[ i ];
-      value = o[ key ];
-
+    forEach(o,function(value,key) {
       if ( _type( value ) === 'array' || _type( value ) === 'object' ) {
         item = _clone( value );
       } else {
@@ -122,7 +117,7 @@ var cls = ( function () {
           to[ key ] = item;
         }
       }
-    }
+    });
     return clone;
   };
 
@@ -1170,7 +1165,7 @@ var cls = ( function () {
    * @param   {[type]} propertyName [description]
    * @returns {[type]} [description]
    */
-  clsClassInstance.prototype.___addPublicProperty = function ( propertyName ) {
+  function ___addPublicProperty( propertyName ) {
     var classId = this.getClassId();
     var className = this.getCurrentClassName();
     var self = this;
@@ -1199,7 +1194,13 @@ var cls = ( function () {
       } );
     }
   };
-
+  Object.defineProperty(clsClassInstance.prototype,'___addPublicProperty',{
+    enumerable:false,
+    configureable:false,
+    get:function(){
+      return ___addPublicProperty;
+    }
+  });
 
 
   /**
@@ -1270,7 +1271,7 @@ var cls = ( function () {
    * @param   {[type]} data [description]
    * @returns {[type]} [description]
    */
-  clsClassFacade.prototype.___addProperty = function ( propertyName, data, addToClassProperties, classId,
+  function ___addProperty( propertyName, data, addToClassProperties, classId,
     inhertiance ) {
 
     if ( !_isDef( classId ) ) {
@@ -1313,7 +1314,13 @@ var cls = ( function () {
     // we cannot add property to instance here because it may not exists yet
     // instaces will have their own prototype function to adding public properties
   };
-
+  Object.defineProperty(clsClassFacade.prototype,'___addProperty',{
+    enumerable:false,
+    configureable:false,
+    get:function(){
+      return ___addProperty;
+    }
+  })
 
   /**
    * dynamically add property to class instance like mixin with only one property
@@ -1323,7 +1330,7 @@ var cls = ( function () {
    * @param  {string}      propertyName [description]
    * @param  {object}      data         [description]
    */
-  clsClassFacade.prototype.addToInstance = function addToInstance(propertyName,data){
+  function addToInstance(propertyName,data){
     var classId = this.getClassId();
     var obj = getObject(classId);
     var instance = obj.classInstance;
@@ -1333,6 +1340,13 @@ var cls = ( function () {
       instance.___addPublicProperty(propertyName);
     }
   }
+  Object.defineProperty(clsClassFacade.prototype,'addToInstance',{
+    enumerable:false,
+    configureable:false,
+    get:function(){
+      return addToInstance;
+    }
+  });
 
   /**
    * runtime mixin inside class instance
@@ -1342,14 +1356,73 @@ var cls = ( function () {
    * @param   {[type]} obj [description]
    * @returns {[type]}     [description]
    */
-  clsClassFacade.prototype.mixWithObject = function instanceMix(obj){
+  function mixWithObject(obj){
     var self = this;
     forEach(obj,function(val,name){
       self.addToInstance(name,val);
     });
   }
+  Object.defineProperty(clsClassFacade.prototype,'mixWithObject',{
+    enumerable:false,
+    configureable:false,
+    get:function(){
+      return mixWithObject;
+    }
+  });
 
 
+  /**
+   * get property as object from classProperties
+   * WARNING!!! be careful because if you modify this property it will affect class instance
+   * this is not a clone!
+   * @method  getInternalProperty
+   * @param   {[type]} propertyName [description]
+   * @returns {[type]}              [description]
+   */
+   function getInternalProperty(propertyName){
+     var classId = this.getClassId();
+     var className = this.getClassName();
+     var obj = getObject(classId);
+     var properties = obj.classProperties;
+     if( _isDef(properties[propertyName])){
+
+       return properties[ propertyName ];
+
+     }else{
+       throw new Error("Property '"+propertyName+"' doesn't exists in [ "+className+" ] class.");
+     }
+   }
+  Object.defineProperty(clsClassFacade.prototype,'getInternalProperty',{
+    enumerable:false,
+    configureable:false,
+    get:function(){
+      return getInternalProperty;
+    }
+  });
+
+
+  /**
+   * get all properties as object from classProperties
+   * WARNING!!! be careful because if you modify this property it will affect class instance
+   * this is not a clone!
+   * @method  getInternalProperty
+   * @param   {[type]} propertyName [description]
+   * @returns {[type]}              [description]
+   */
+  function getInternalProperties(){
+    var classId = this.getClassId();
+    var className = this.getClassName();
+    var obj = getObject(classId);
+    var properties = obj.classProperties;
+    return properties;
+  }
+  Object.defineProperty(clsClassFacade.prototype,'getInternalProperties',{
+    enumerable:false,
+    configureable:false,
+    get:function(){
+      return getInternalProperties;
+    }
+  });
 
   /**
    * constructor for classData object
@@ -1413,21 +1486,6 @@ var cls = ( function () {
   }
 
 
-  /**
-   * get clone of property or method as object from class properties
-   *
-   * @method  asObject
-   * @param   {[type]} classId      [description]
-   * @param   {[type]} propertyName [description]
-   * @returns {[type]}              [description]
-   */
-  function asObject(classId,propertyName){
-    var obj = getObject(classId);
-    var properties=obj.classProperties;
-    var property = properties[ propertyName ];
-    var result = _clone(property);
-    return result;
-  }
 
   /**
    * MAIN logic for getting data from classData object
@@ -1694,6 +1752,151 @@ var cls = ( function () {
     }
   }
 
+  function stackTrace(skip){
+    //TODO correct stack trace differences between browsers
+    var stack = '';
+    try { var a = {}; a.debug(); } catch(ex) {stack = ex.stack;}
+    var arr = stack.split("\n").slice(skip);
+    return arr.join("\n");
+  }
+
+  function fnToStrings(obj){
+    var type= _type(obj);
+    type = type.toLowerCase();
+    if( type === 'function'){
+      var stack = stackTrace(9);
+      var preStr= "cls.function:/*\ncompressed function from:\n"+stack+"*/\n";
+      return preStr+obj.toString();
+    }
+    if( type === 'object' || type === 'array'){
+      var iterate = _clone(obj);
+      var result;
+      if( type === 'object'){result = {};}
+      if( type === 'array'){result = [];}
+      forEach(iterate,function(val,name){
+        result[name] = fnToStrings(val);
+        console.log('adding',result[name]);
+      });
+      return result;
+    }
+    // if not a function just return original obj
+    return obj;
+  }
+
+  cls.compress = function clsCompress(anything){
+    var result = fnToStrings(anything);
+    console.log("zestringowane",result);
+    var json = JSON.stringify(result);
+    return LZString.compress(json);
+  }
+
+
+  function StringsToFn(obj){
+    var type=_type(obj);
+    type = type.toLowerCase();
+    if( type === 'string'){
+      // check whether we have a function or simple string
+      if(obj.substr(0,13) === 'cls.function:'){
+        var str = obj.substr(13);
+        var fn = eval("("+str+")");
+        return fn;
+      }
+    }
+    if( type === 'object' || type === 'array'){
+      var result;
+      if( type === 'object'){result={};}
+      if( type ==='array'){result =[];}
+      forEach(obj,function(val,name){
+        result[name]=StringsToFn(val);
+      });
+      return result;
+    }
+    return obj;
+  }
+
+
+  cls.decompress = function clsDecompress(str){
+    str= LZString.decompress(str);
+    var obj = JSON.parse(str);
+    var result = StringsToFn(obj);
+    return result;
+  }
+
+  function compressExtend(){
+
+    var result = {};
+    var self = this;
+    result.name = this.___className;
+    result.type  = this.___type;
+
+    var firstClass = this.___firstClass;
+    var secondClass = this.___secondClass;
+
+
+    result.data = {
+      firstClass: compress.call(firstClass,true),
+      secondClass: compress.call(secondClass,true)
+    }
+    return result;
+
+  }
+
+  function compressClass(){
+    var result = {};
+    var self = this;
+    result.name = this.___className;
+    result.type  = this.___type;
+
+    var toCompress = this.___source;
+    var data = toCompress.toString();
+    data = /^function\s[^\{]+\{(?:\s+)?return\s?([^$]+)\s?\}$/gi.exec(data);
+    data = data[1];
+    result.data = data;
+    return result;
+  }
+
+  function compress(waitForNow){
+    var result;
+    if(this.___type === 'class'){ result = compressClass.call(this); }
+    if(this.___type === 'extend'){ result = compressExtend.call(this); }
+    if(!_isDef(waitForNow)){
+      result= JSON.stringify(result);
+      result = LZString.compress(result);
+      this.compressed = result;
+    }
+    return result;
+  }
+
+  function stringToFunction(str){
+    return new Function("return "+str);
+  }
+
+  function buildFromStringObjects(obj){
+    var result;
+    if( obj.type === 'class'){
+      result = cls.class(obj.name,stringToFunction(obj.data));
+    }
+    if( obj.type === 'extend'){
+      var first = buildFromStringObjects( obj.data.firstClass );
+      var second = buildFromStringObjects( obj.data.secondClass );
+      result = cls.extend(first,second);
+    }
+    return result;
+  }
+
+  function decompress(){
+    var str = this.compressed;
+    if(str === ''){
+      throw new Error("Class is not compressed.");
+    }
+    var json = LZString.decompress(str);
+    var obj = JSON.parse(json);
+    // we must build classes again form source objects ;)
+    var result = buildFromStringObjects(obj);
+    return result;
+  }
+
+
   /**
    * classCreator
    * @param  {string} className           [description]
@@ -1745,7 +1948,9 @@ var cls = ( function () {
     constructor.___arguments = arguments;
     constructor.isConstructor = true;
     constructor.extend = constructorExtend.bind( constructor );
-
+    constructor.compressed = '';
+    constructor.compress = compress.bind(constructor);
+    constructor.decompress = decompress.bind(constructor);
     return constructor;
   }
 
@@ -2055,6 +2260,8 @@ var cls = ( function () {
     constructor.___className = secondClass.___className;
     constructor.isConstructor = true;
     constructor.extend = constructorExtend.bind( constructor );
+    constructor.compress = compress.bind(constructor);
+    constructor.decompress = decompress.bind(constructor);
     return constructor;
   }
 
