@@ -429,6 +429,11 @@ var cls = ( function () {
       if ( _isDef( classObject.classProperties[ methodName ].arguments ) ) {
 
         params = classObject.classProperties[ methodName ].arguments;
+        if( params.length === 0 ){
+          // if there is no argument declarations
+          return Array.prototype.slice.call(args);
+        }
+
         for ( i in params ) {
           val = params[ i ];
 
@@ -471,6 +476,8 @@ var cls = ( function () {
 
         }
 
+      }else{
+        return Array.prototype.slice(args);
       }
     } else {
       throw new Error( "There is no such method like ", methodName );
@@ -954,6 +961,12 @@ var cls = ( function () {
         data.arguments = [];
       }
 
+      if( _type(data.value) === 'function'){
+        if(_type(data.arguments) === 'undefined'){
+          data.arguments = [];
+        }
+      }
+
     } else {
       throw new Error( "Cannot create property from empty object." );
     }
@@ -1061,9 +1074,11 @@ var cls = ( function () {
    * @param   {[type]} data [description]
    * @returns {[type]} [description]
    */
-  function addToClassProperties( classProperties, name, data ) {
-    // TODO creating classes from object not TESTED!! can have a lot of bugs!!!
-    var classId = data.classId;
+  function _addToClassProperties( classProperties, name, data,classId ) {
+    if( _type(data) === 'undefined' || _type(data) === 'null'){
+      throw new Error("Cannot add property from empty object.");
+    }
+    if( _type(data.classId) === 'undefined'){data.classId = classId; }
     var obj = getObject( classId );
     var facade = obj.classFacade;
     var className = facade.getClassName();
@@ -1085,7 +1100,7 @@ var cls = ( function () {
   function classPropertiesFromObject( className, source, classId, classProperties ) {
 
     forEach( source, function ( val, name ) {
-      addToClassProperties( classProperties, name, val );
+      _addToClassProperties( classProperties, name, val, classId );
     } );
     return classProperties;
   };
@@ -1155,7 +1170,7 @@ var cls = ( function () {
    * @param   {[type]} propertyName [description]
    * @returns {[type]} [description]
    */
-  clsClassInstance.prototype.addPublicProperty = function ( propertyName ) {
+  clsClassInstance.prototype.___addPublicProperty = function ( propertyName ) {
     var classId = this.getClassId();
     var className = this.getCurrentClassName();
     var self = this;
@@ -1255,13 +1270,13 @@ var cls = ( function () {
    * @param   {[type]} data [description]
    * @returns {[type]} [description]
    */
-  clsClassFacade.prototype.addProperty = function ( propertyName, data, addToClassProperties, classId,
+  clsClassFacade.prototype.___addProperty = function ( propertyName, data, addToClassProperties, classId,
     inhertiance ) {
 
     if ( !_isDef( classId ) ) {
       classId = this.getClassId();
     }
-    //console.log('facade.addProperty',classId);
+    //console.log('facade.___addProperty',classId);
     var className = this.getCurrentClassName();
     var classObject = __allClasses[ classId ];
     var classData = classObject.classData;
@@ -1271,7 +1286,7 @@ var cls = ( function () {
       addToClassProperties = false;
     }
     if ( addToClassProperties === true ) {
-      addToClassProperties( classObject.classProperties, propertyName, data );
+      _addToClassProperties( classObject.classProperties, propertyName, data, classId );
     }
 
     checkPropertyType( classId, className, data.value, propertyName );
@@ -1298,6 +1313,43 @@ var cls = ( function () {
     // we cannot add property to instance here because it may not exists yet
     // instaces will have their own prototype function to adding public properties
   };
+
+
+  /**
+   * dynamically add property to class instance like mixin with only one property
+   * data is object with classId, declarations, arguments, returns, type and so on
+   * only data.value is required to work - rest values will be default ones if not declared
+   * @method addToInstance
+   * @param  {string}      propertyName [description]
+   * @param  {object}      data         [description]
+   */
+  clsClassFacade.prototype.addToInstance = function addToInstance(propertyName,data){
+    var classId = this.getClassId();
+    var obj = getObject(classId);
+    var instance = obj.classInstance;
+
+    this.___addProperty(propertyName,data,true,classId);
+    if( data.declarations.indexOf('public') !== -1){
+      instance.___addPublicProperty(propertyName);
+    }
+  }
+
+  /**
+   * runtime mixin inside class instance
+   * obj key = name of the property/method and value is an object declaring
+   * how property should behave like addToInstance
+   * @method  mixWithObject
+   * @param   {[type]} obj [description]
+   * @returns {[type]}     [description]
+   */
+  clsClassFacade.prototype.mixWithObject = function instanceMix(obj){
+    var self = this;
+    forEach(obj,function(val,name){
+      self.addToInstance(name,val);
+    });
+  }
+
+
 
   /**
    * constructor for classData object
@@ -1448,12 +1500,23 @@ var cls = ( function () {
     }
   };
 
-
+  /**
+   * get class name as string of given classId
+   * @method  getClassNameOf
+   * @param   {[type]}       classId [description]
+   * @returns {[type]}               [description]
+   */
   function getClassNameOf( classId ) {
     var obj = getObject( classId );
     return obj.classFacade.getCurrentClassName();
   }
 
+  /**
+   * get array of class names from array of classId order is the same
+   * @method  getClassNamesOf
+   * @param   {[type]}        classesIds [description]
+   * @returns {[type]}                   [description]
+   */
   function getClassNamesOf( classesIds ) {
     var result = [];
     forEach( classesIds, function ( classId ) {
@@ -1462,6 +1525,16 @@ var cls = ( function () {
     return result;
   }
 
+  /**
+   * check whether given instance as property can be associated
+   * in other words this is type checking for classes
+   * @method  canBeClass
+   * @param   {[type]}   instance     [description]
+   * @param   {[type]}   shouldBe     [description]
+   * @param   {[type]}   className    [description]
+   * @param   {[type]}   propertyName [description]
+   * @returns {[type]}                [description]
+   */
   function canBeClass( instance, shouldBe, className, propertyName ) {
 
     var valueType = instance.getClassName();
@@ -1637,20 +1710,26 @@ var cls = ( function () {
       throw new Error( "Source for class creation must be a function or specially prepared object." );
     }
 
-    var classConstructor = function classConstructor() {
+    var constructor = function classConstructor() {
       var args = arguments;
       var instance = cls.create( className, source );
-      fireConstructor( instance, args );
-      return instance;
+      var result = fireConstructor( instance, args );
+      if(_type(result) === 'undefined'){
+        return instance;
+      }else{
+        return result;
+      }
     }
-    classConstructor.___type = 'class';
-    classConstructor.___source = source;
-    classConstructor.___className = className;
-    classConstructor.___arguments = arguments;
-    classConstructor.isConstructor = true;
-    classConstructor.extend = constructorExtend.bind( classConstructor );
 
-    return classConstructor;
+
+    constructor.___type = 'class';
+    constructor.___source = source;
+    constructor.___className = className;
+    constructor.___arguments = arguments;
+    constructor.isConstructor = true;
+    constructor.extend = constructorExtend.bind( constructor );
+
+    return constructor;
   }
 
 
@@ -1763,7 +1842,7 @@ var cls = ( function () {
       lockProperty( name, classInstance );
       if ( val.classId === classFacade.getClassId() ) {
         if ( !_isDef( classFacade[ name ] ) ) {
-          classFacade.addProperty( name, val, false );
+          classFacade.___addProperty( name, val, false );
         }
       }
     } );
@@ -1771,7 +1850,7 @@ var cls = ( function () {
 
 
     forEach( publicProperties, function ( val, name ) {
-      classInstance.addPublicProperty( name );
+      classInstance.___addPublicProperty( name );
     } );
 
     //console.log( "there is", Object.keys( __allClasses ).length, "classes created" );
@@ -1897,9 +1976,9 @@ var cls = ( function () {
     forEach( classProperties, function ( val, key ) {
       // adding properties from parent classes
       if ( val.classId !== secondClassId ) {
-        secondClassFacade.addProperty( key, val, false );
+        secondClassFacade.___addProperty( key, val, false );
         if ( _typeIs( val, 'public' ) ) {
-          secondClassInstance.addPublicProperty( key );
+          secondClassInstance.___addPublicProperty( key );
         }
       }
     } );
@@ -1928,7 +2007,6 @@ var cls = ( function () {
     }
   }
 
-
   cls.extend = function extend( firstClass, secondClass ) {
 
     if ( _type( firstClass ) === 'array' ) {
@@ -1941,21 +2019,26 @@ var cls = ( function () {
       return arrayExtend( _args );
     }
 
-    var classConstructor = function classConstructor() {
-        var args = arguments;
-        var instance = _extend( firstClass, secondClass );
-        fireConstructor( instance, args );
+    var constructor = function classConstructor() {
+      var args = arguments;
+      var instance = _extend( firstClass, secondClass );
+      var result = fireConstructor( instance, args );
+      if( _type(result) === 'undefined'){
         return instance;
+      }else{
+        return result;
       }
-      // if we want another extend we must have source for creation purpose
-    classConstructor.___type = 'extend';
-    classConstructor.___firstClass = firstClass;
-    classConstructor.___secondClass = secondClass;
-    classConstructor.___arguments = arguments;
-    classConstructor.___className = secondClass.___className;
-    classConstructor.isConstructor = true;
-    classConstructor.extend = constructorExtend.bind( classConstructor );
-    return classConstructor;
+    }
+
+    // if we want another extend we must have source for creation purpose
+    constructor.___firstClass = firstClass;
+    constructor.___secondClass = secondClass;
+    constructor.___arguments = arguments;
+    constructor.___type = 'extend';
+    constructor.___className = secondClass.___className;
+    constructor.isConstructor = true;
+    constructor.extend = constructorExtend.bind( constructor );
+    return constructor;
   }
 
 
