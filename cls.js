@@ -1412,6 +1412,23 @@ var cls = ( function () {
     return obj.classFacade.getCurrentClassName();
   }
 
+
+  /**
+   * get clone of property or method as object from class properties
+   *
+   * @method  asObject
+   * @param   {[type]} classId      [description]
+   * @param   {[type]} propertyName [description]
+   * @returns {[type]}              [description]
+   */
+  function asObject(classId,propertyName){
+    var obj = getObject(classId);
+    var properties=obj.classProperties;
+    var property = properties[ propertyName ];
+    var result = _clone(property);
+    return result;
+  }
+
   /**
    * MAIN logic for getting data from classData object
    * this function executes every time when class wants some property
@@ -1443,14 +1460,14 @@ var cls = ( function () {
           var facade = this.classFacades[ classId ];
           var obj = getObject( classId );
           //return result.value.bind(facade);
-          return function preMethod() {
+          function preMethod() {
             var _args = arguments;
             _args = checkMethodArgTypes( obj, propertyName, _args );
             var result = property.value.apply( facade, _args );
             checkReturnValue( classId, propertyName, result );
             return result;
           }
-
+          return preMethod;
         } else {
           return property.value;
         }
