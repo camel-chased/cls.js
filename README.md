@@ -45,7 +45,7 @@ var MyClass = cls.class("MyClass",function(){
 
     /**
      * some description if needed...
-     * @property {string}
+     * @property {string} prop
      */
     prop:"this is private property",
 
@@ -54,6 +54,7 @@ var MyClass = cls.class("MyClass",function(){
      * @returns {string}
      */
     publ:function(){
+      // by default methods and properties are public
       return "this is public property";
     },
 
