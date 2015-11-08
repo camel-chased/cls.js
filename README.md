@@ -102,25 +102,6 @@ var st = MyClass.statMet(); // "this is static method"
 var myInstance = MyClass("Robocop");
 ```
 
-### Mix-in
-
-```javascript
-var dynamo = {
-  someOtherMethod:{
-    declarations:['public','final'],
-    value:function(){
-      return "this method is added at runtime";
-    }
-  },
-  dynapro:{
-    value:"This is dynamic property added somewhere in code execution"
-  }
-}
-// the "mix" method is declared in MyClass
-myInstance.mix(dynamo);
-myInstance.someOtherMethod(); //"this method is added at runtime"
-```
-
 ### Extending
 
 ```javascript
@@ -150,6 +131,25 @@ var test2 = ExtInstance.secondFeature(); // "some additional function"
 
 //static from MyClass is also inherited
 Ext.statMet();
+```
+
+### Mix-in
+
+```javascript
+var dynamo = {
+  someOtherMethod:{
+    declarations:['public','final'],
+    value:function(){
+      return "this method is added at runtime";
+    }
+  },
+  dynapro:{
+    value:"This is dynamic property added somewhere in code execution"
+  }
+}
+// the "mix" method is declared in MyClass
+myInstance.mix(dynamo);
+myInstance.someOtherMethod(); //"this method is added at runtime"
 ```
 
 ### Factories
