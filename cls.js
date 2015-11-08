@@ -5,22 +5,6 @@
  * License: MIT
  *
  */
-/*
- classFacade have access all of the properties/methods
- classInstance have access to public only - verified by facade
-
-
- public
- classInstance.method -> classFacade -> classProperties
- where "this" is pointing to classFacade itself
-
- private
- within a class method
- classInstance.method -> classFacade -> classProperties
- where classInstance "this" is pointing to facade
- outside classInstance there is no private methods/properties
-
- */
 
 var cls = ( function () {
 
