@@ -486,7 +486,7 @@ var cls = ( function () {
 
     var returns = classProperties[ methodName ].returns;
     if ( returns.indexOf( 'anytype' ) >= 0 ) {
-      return true;
+      return value;
     }
 
     if ( returns.indexOf( currentType ) === -1 ) {
@@ -494,7 +494,14 @@ var cls = ( function () {
         " ] class, should return '" +
         returns.join( ',' ) + "', not '" + currentType + "'." );
     }
-    return true;
+
+    // if some method returns "this" we must replace it with instance instead of facade
+    // when returning "this" in methods we are gettting instance instead of facade
+    if( currentType === 'clsClassFacade'){
+      return obj.classInstance;
+    }
+
+    return value;
   }
 
 
@@ -1580,7 +1587,7 @@ var cls = ( function () {
             var _args = arguments;
             _args = checkMethodArgTypes( obj, propertyName, _args );
             var result = property.value.apply( facade, _args );
-            checkReturnValue( classId, propertyName, result );
+            result = checkReturnValue( classId, propertyName, result );
             return result;
           }
           return preMethod;
