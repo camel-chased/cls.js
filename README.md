@@ -121,6 +121,7 @@ var Second = cls.class("Second",function(){
 
 // you can extend classes dynamically like mixin but order is important
 // left class doesn't have access to right class properties/methods
+// argument list can be of course longer cls.extend(one,two,three,four...and so on)
 var Ext = cls.extend(MyClass,Second);
 
 // crating instance
@@ -131,6 +132,27 @@ var test2 = ExtInstance.secondFeature(); // "some additional function"
 
 //static from MyClass is also inherited
 Ext.statMet();
+
+// or another way
+var Ext = MyClass.extend(Second);
+
+// or with array - array can be dynamically generated
+var Ext = cls.extend([MyClass,Second]);
+
+// or something like this - but this way is the worst way because you loose flexibility
+var Ext = MyClass.extend(cls.class("Ext",function(){
+  return {
+    // code for Extension here
+  };
+}));
+// it is always better to store functionality in variables so you can reuse them
+var Ext = cls.class("Ext",function(){
+  return {
+    // code for Extension here
+  };
+});
+var Ext_ = MyClass.extend(Ext);
+var Ext_instance = new Ext_;
 ```
 
 ### Mix-in
