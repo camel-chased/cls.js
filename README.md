@@ -199,7 +199,7 @@ var SomeClass = cls.class("SomeClass",function(){
 
     /**
      * temporary property to work with
-     * @property {object|null} states public
+     * @property {object|null|undefined} states public
      */
     states:null,
 
@@ -211,6 +211,7 @@ var SomeClass = cls.class("SomeClass",function(){
      */
     SomeClass:function(states){
       // default states are json compatible string declared in comment block
+      // so when there is no states defaults will be used
       this.states = states;
     },
 
