@@ -1,6 +1,8 @@
-node_modules
+node_modules/
+test/
 performance.js
 index.html
+package.json
 classObject.dia
 classObject.jpg
 classObject.pdf
