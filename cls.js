@@ -485,7 +485,11 @@ var cls = ( function () {
     }
 
     var returns = classProperties[ methodName ].returns;
+
     if ( returns.indexOf( 'anytype' ) >= 0 ) {
+      if( currentType === 'clsClassFacade'){
+        return obj.classInstance;
+      }
       return value;
     }
 
@@ -495,7 +499,8 @@ var cls = ( function () {
         returns.join( ',' ) + "', not '" + currentType + "'." );
     }
 
-    // if some method returns "this" we must replace it with instance instead of facade
+    // if some method returns "this" we must replace it with instance instead of
+    // facade that have access to all properties
     // when returning "this" in methods we are gettting instance instead of facade
     if( currentType === 'clsClassFacade'){
       return obj.classInstance;
