@@ -11,6 +11,7 @@ PROS
 * Builtin class and object compression (json alternative, you can send class or object with functions through http - compressed).
 * New methods/properties can be added dynamically.
 * ES5 compatible, browser and nodejs support.
+* No need to compile anything.
 
 CONS
 
