@@ -137,16 +137,19 @@ Ext.statMet();
 
 ```javascript
 var dynamo = {
-  someOtherMethod:{
+
+  'someOtherMethod':{
     declarations:['public','final'],
     value:function(){
       return "this method is added at runtime";
     }
   },
-  dynapro:{
+
+  'dynapro':{
     value:"This is dynamic property added somewhere in code execution"
   }
-}
+
+};
 // the "mix" method is declared in MyClass
 myInstance.mix(dynamo);
 myInstance.someOtherMethod(); //"this method is added at runtime"
