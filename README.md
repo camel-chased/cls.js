@@ -17,6 +17,13 @@ CONS
 
 * Can't be minified (sort of) - compression added instead or you can minify without comment block minification
 
+
+TODO
+
+* Automatic testing - no need to manually write basic tests
+* Automatic visualization - UML generation
+* Automatic documentation
+
 ### How to use it
 
 Most declarations are defined in comment blocks like below...
@@ -193,7 +200,6 @@ var Car = cls.class("Car",function(){
 
     Car:function(model){
       if( typeof model !== 'undefined'){
-
         return this.factory(model);
       }
     },
@@ -218,7 +224,7 @@ myCar = Car("Honda");
 myCar = Car.factory("Honda");
 ```
 
-### Statless classes
+### Stateless classes
 
 ```javascript
 //if you want keep states outside class - no problem
