@@ -185,6 +185,46 @@ var myCar;
 myCar = Car("Honda");
 // or
 myCar = Car.factory("Honda");
+
+
+//if you want keep states outside class - no problem
+// just give it to the constructor - like factory
+
+
+var SomeClass = cls.class("SomeClass",function(){
+  return {
+
+    /**
+     * temporary property to work with
+     * @property {object|null} states public
+     */
+    states:null,
+
+    /**
+     * stateless class must have states from outside world
+     * @method  SomeClass
+     * @param   {object} states = {}
+     * @returns {anytype}
+     */
+    SomeClass:function(states){
+      this.states = states;
+    },
+
+    sayMyName:function(){
+      console.log(this.states.name+" "+this.states.surname);
+    }
+
+  };
+});
+
+// you can load states from db or whatever
+var states = {
+  name:"John",
+  surname:"Doe"
+};
+//and when instantiate reference to it
+var instance = SomeClass(states);
+instance.sayMyName(); // John Doe
 ```
 
 
