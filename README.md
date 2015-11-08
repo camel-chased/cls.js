@@ -100,9 +100,11 @@ var st = MyClass.statMet(); // "this is static method"
 
 // you don't need to write "new" keyword
 var myInstance = MyClass("Robocop");
+```
 
+### Mix-in
 
-// mixin...
+```javascript
 var dynamo = {
   someOtherMethod:{
     declarations:['public','final'],
@@ -117,9 +119,11 @@ var dynamo = {
 // the "mix" method is declared in MyClass
 myInstance.mix(dynamo);
 myInstance.someOtherMethod(); //"this method is added at runtime"
+```
 
+### Extending
 
-// extending ...
+```javascript
 var Second = cls.class("Second",function(){
   return {
 
@@ -146,9 +150,11 @@ var test2 = ExtInstance.secondFeature(); // "some additional function"
 
 //static from MyClass is also inherited
 Ext.statMet();
+```
 
-// factory...
+### Factories
 
+```javascript
 var Honda = cls.class("Honda",function(){
   return {
     drive:function(){
