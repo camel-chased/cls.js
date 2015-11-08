@@ -78,6 +78,16 @@ var MyClass = cls.class("MyClass",function(){
       // declared after '=' sign
       // this method can't be overriden
       return name+" "+surname;
+    },
+
+    /**
+     * if you want to mix this class then you must express it
+     * @method  mix public
+     * @param   {object} obj
+     * @returns {undefined}
+     */
+    mix:function(obj){
+      this.mixWithObject(obj);
     }
 
   };
@@ -103,8 +113,8 @@ var dynamo = {
     value:"This is dynamic property added somewhere in code execution"
   }
 }
-
-myInstance.mixWithObject(dynamo);
+// the "mix" method is declared in MyClass
+myInstance.mix(dynamo);
 myInstance.someOtherMethod(); //"this method is added at runtime"
 
 
