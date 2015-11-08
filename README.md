@@ -96,7 +96,7 @@ var dynamo = {
   someOtherMethod:{
     declarations:['public','final'],
     value:function(){
-      return "this method is added in runtime";
+      return "this method is added at runtime";
     }
   },
   dynapro:{
@@ -105,7 +105,7 @@ var dynamo = {
 }
 
 myInstance.mixWithObject(dynamo);
-myInstance.someOtherMethod(); //"this method is added in runtime"
+myInstance.someOtherMethod(); //"this method is added at runtime"
 
 
 // extending ...
