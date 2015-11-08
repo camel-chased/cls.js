@@ -260,7 +260,8 @@ var states = {
 };
 //and when instantiate reference to it
 var instance = SomeClass(states);
-instance.sayMyName(); // John Doe
+instance.sayMyName(); // "Mark Schwarzeneger"
+
 ```
 
 
