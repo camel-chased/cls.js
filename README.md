@@ -137,15 +137,14 @@ var Second = cls.class("Second",function(){
 // left class doesn't have access to right class properties/methods
 var Ext = cls.extend(MyClass,Second);
 
-//static from MyClass is inherited
-Ext.statMet();
-
 // crating instance
 var ExtInstance = Ext();
 
 var test = ExtInstance.publ(); // "this is public property"
 var test2 = ExtInstance.secondFeature(); // "some additional function"
 
+//static from MyClass is also inherited
+Ext.statMet();
 
 // factory...
 
