@@ -185,8 +185,11 @@ var myCar;
 myCar = Car("Honda");
 // or
 myCar = Car.factory("Honda");
+```
 
+### Statless classes
 
+```javascript
 //if you want keep states outside class - no problem
 // just give it to the constructor - like factory
 
@@ -203,10 +206,11 @@ var SomeClass = cls.class("SomeClass",function(){
     /**
      * stateless class must have states from outside world
      * @method  SomeClass
-     * @param   {object} states = {}
+     * @param   {object} states = {"name":"John","surname":"Doe"}
      * @returns {anytype}
      */
     SomeClass:function(states){
+      // default states are json compatible string declared in comment block
       this.states = states;
     },
 
@@ -219,8 +223,8 @@ var SomeClass = cls.class("SomeClass",function(){
 
 // you can load states from db or whatever
 var states = {
-  name:"John",
-  surname:"Doe"
+  name:"Mark",
+  surname:"Schwarzeneger"
 };
 //and when instantiate reference to it
 var instance = SomeClass(states);
