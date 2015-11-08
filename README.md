@@ -45,7 +45,7 @@ var MyClass = cls.class("MyClass",function(){
 
     /**
      * some description if needed...
-     * @property {string} prop
+     * @property {string} prop private
      */
     prop:"this is private property",
 
