@@ -45,7 +45,7 @@ var cls = ( function () {
    * @returns {String} typeof
    */
   function _type( obj ) {
-
+    var standardConstructors = [ "Object", "Function" ];
     if ( typeof obj === 'undefined' ) {
       return 'undefined';
     }
@@ -58,10 +58,10 @@ var cls = ( function () {
 
     if ( Array.isArray( obj ) ) {
       return 'array';
-    } else if ( typeof obj === 'object' ) {
+    } else if ( typeof obj === 'object' || typeof obj === 'Object' ) {
       if ( _isDef( obj.constructor ) ) {
         if ( _isDef( obj.constructor.name ) ) {
-          if ( obj.constructor.name !== '' ) {
+          if ( standardConstructors.indexOf( obj.constructor.name ) === -1 ) {
             return obj.constructor.name;
           } else {
             return typeof obj;
@@ -104,7 +104,7 @@ var cls = ( function () {
       clone = [];
     }
 
-    forEach(o,function(value,key) {
+    forEach( o, function ( value, key ) {
       if ( _type( value ) === 'array' || _type( value ) === 'object' ) {
         item = _clone( value );
       } else {
@@ -117,7 +117,7 @@ var cls = ( function () {
           to[ key ] = item;
         }
       }
-    });
+    } );
     return clone;
   };
 
@@ -135,14 +135,14 @@ var cls = ( function () {
       len = keys.length,
       i = 0,
       tmp = {},
-      _obj2 = cls.clone( obj2 ),
-      obj3 = cls.clone( obj1 );
+      _obj2 = _clone( obj2 ),
+      obj3 = _clone( obj1 );
 
 
     for ( ; i < len; i++ ) {
       key = keys[ i ];
       if ( _type( _obj2[ key ] ) === 'object' && _type( obj1[ key ] ) === 'object' ) {
-        tmp = cls.merge( obj3[ key ], _obj2[ key ] );
+        tmp = _merge( obj3[ key ], _obj2[ key ] );
         obj3[ key ] = tmp;
       } else {
         obj3[ key ] = _obj2[ key ];
@@ -157,6 +157,9 @@ var cls = ( function () {
   function forEach( obj, fn, ctx ) {
     if ( toString.call( fn ) !== '[object Function]' ) {
       throw new TypeError( 'iterator must be a function' );
+    }
+    if ( !_isDef( obj ) ) {
+      throw new Error( "Object is undefined." );
     }
     var l = obj.length;
     if ( l === +l ) {
@@ -218,7 +221,7 @@ var cls = ( function () {
       s4() + '-' + s4() + s4() + s4();
   };
 
-
+  cls.guid = _guid;
 
   /**
    * converts default parameters to its type like string, number, object
@@ -424,9 +427,9 @@ var cls = ( function () {
       if ( _isDef( classObject.classProperties[ methodName ].arguments ) ) {
 
         params = classObject.classProperties[ methodName ].arguments;
-        if( params.length === 0 ){
+        if ( params.length === 0 ) {
           // if there is no argument declarations
-          return Array.prototype.slice.call(args);
+          return Array.prototype.slice.call( args );
         }
 
         for ( i in params ) {
@@ -471,8 +474,8 @@ var cls = ( function () {
 
         }
 
-      }else{
-        return Array.prototype.slice(args);
+      } else {
+        return Array.prototype.slice( args );
       }
     } else {
       throw new Error( "There is no such method like ", methodName );
@@ -702,181 +705,245 @@ var cls = ( function () {
     return newObj;
   };
 
+  var COMMENT_BLOCK = '\\/\\*\\*?\\s*([^\\/]+)';
+  var METHOD_REG = '^\\s?\\@method[ \\t]+([^\\s]+)[ \\t]*(?:([^\\n \\t]+))?(?:[ \\t]+([^\\n]+))?\\s?$';
+  var PROPERTY_REG =
+    '^\\s?\\@property[ \\t]+\\{([^\\}]+)\\}[ \\t]+([^ \\t\\r\\n]+)[ \\t]*([^\\s\\*\\/]+)?(?:[ \\t]+([^\\n\\/]+))?$';
+  var RETURNS_REG = '^\\@returns?\[ \\t]+\\{([^\\}]+)\\}';
+  var STATIC_METHOD_PROPERTY = '^\\s?\\@(method|property)[ \\t]+(?:\\{.*\\})?[ \\t]?(.*)(?:static)';
+  var METHOD_PROPERTY =
+    '^\\s?\\@(method|property)[ \\t]+(?:\\{[a-z0-9_\\$\\|]+\\})?[ \\t]?([a-z0-9_\\$]+)?(?:[ \\t]+([a-z]+))?';
 
 
-  /**
-   * search for comment blocks in a given string and parse it to object
-   * if there is no comment blocks nothings happen to classProperties
-   * @method getCommentBlocks
-   * @param {string} str
-   * @param {string} className - for error info
-   * @returns {object}
-   */
-  function getCommentBlocks( sourceObject, className, classId, classProperties ) {
+  function cleanOutCommentBlock( tmp ) {
+    var result = String( tmp[ 1 ] ).
+    replace( /^[\t\*]+/gim, '' ).
+    replace( /[\*]+/gim, '' ).
+    replace( /^[ \t\n]{2,50}/gi, '' ).
+    replace( /\n/gi, '' ).
+    replace( /(\@)/gi, "\n$1" ).
+    replace( /^\s+/gim, '' ).
+    replace( /\s+$/gim, '' ).trim();
+    return result;
+  }
 
-    //var commentBlock = /\/\*\*?\s?([^\/]+)(?!(\*\/))\n?/gi,
-    var commentBlock = /\/\*\*?\s*([^\/]+)/gim,
-      blocks = classProperties,
-      tmp = [],
-      parsed = '',
-      method = /^\s?\@method +([^\s]+) *(?:([^\n \t]+))?(?: +([^\n]+))?\s?$/gim,
-      methodObj = {},
-      property = /^\@property +\{([^\}]+)\} +([^ \t\r\n]+) *([^\s\*\/]+)?(?: +([^\n\/]+))?$/gim,
-      propertyObj = {},
-      returns = /^\@returns?\s+\{([^\}]+)\}/gim,
-      returnObj = {},
-      i = 0,
-      len = 0,
-      block = '',
-      types = {},
-      methodName = '',
-      propertyName = [],
-      blockNames = [],
-      blockName = '',
-      declarations = [],
-      str = sourceObject.str,
-      obj = sourceObject.obj,
-      tmpProperty = {};
+  function prepareMethod( oneCommentBlockStr, sourceObject, classId, classProperties ) {
 
-
-
-    if ( !_isDef( classProperties ) ) {
-      throw new Error( 'there is no classProperties object!' );
+    var blocks = {};
+    var method = new RegExp( METHOD_REG, "gim" );
+    var obj = sourceObject.obj;
+    var className = sourceObject.className;
+    var returns = new RegExp( RETURNS_REG, "gim" );
+    var returnObj;
+    var declarations = [];
+    var staticProp = false;
+    if ( !_isDef( classId ) ) {
+      staticProp = true;
     }
 
-    /*
-    if ( _type( source ) === 'function' ) {
-      str = source.toString();
-      obj = source();
+    methodObj = method.exec( oneCommentBlockStr );
+    //console.log(methodObj);
+    if ( _isDef( methodObj ) ) {
+
+      methodName = methodObj[ 1 ];
+
+      if ( !staticProp ) {
+        if ( !canOverride( classProperties, methodName, classId ) ) {
+          throw new Error( "Cannot override '" + methodName + "' method." );
+        }
+      }
+
+      if ( !_isDef( obj[ methodName ] ) ) {
+        throw new Error( "Property '" + methodName + "' is declared but not defined in [ " + className +
+          " ] class." );
+      }
+      blocks[ methodName ] = {
+        'types': [ 'function' ]
+      };
+      // ---------------- IMPORTANT ------------------
+      // if there is no classId it means that this is static property
+      blocks[ methodName ].classId = 'static:' + className;
+      if ( _isDef( classId ) ) {
+        blocks[ methodName ].classId = classId;
+      }
+      blocks[ methodName ].className = className;
+      blocks[ methodName ].value = obj[ methodName ];
+      // ---------------- IMPORTANT ------------------
+
+      if ( methodObj.length === 4 ) {
+        if ( _isDef( methodObj[ 2 ] ) ) {
+          // declaration is an array like ['public','final']
+          declarations = [ methodObj[ 2 ] ];
+          if ( _isDef( methodObj[ 3 ] ) ) {
+            declarations.push( methodObj[ 3 ] );
+          }
+          if ( staticProp && declarations.indexOf( 'static' ) === -1 ) {
+            throw new Error( "It should  be static property or classId is undefined." );
+          }
+          if ( checkDeclarations( declarations, className, methodName, true ) ) {
+            blocks[ methodName ].declarations = declarations;
+          }
+          //define public property only when they are undeclared
+        } else if ( !_isDef( blocks[ methodName ].declarations ) ) {
+          blocks[ methodName ].declarations = [ 'public' ];
+        }
+      }
+      blocks[ methodName ].str = oneCommentBlockStr;
+
+      generateArgumentTypes( blocks[ methodName ] );
+      // if this is a method it should have a return value
+      returnObj = returns.exec( oneCommentBlockStr );
+      if ( _isDef( returnObj ) ) {
+        blocks[ methodName ].returns = returnObj[ 1 ].split( '|' );
+        forEach( blocks[ methodName ].returns, function ( val, key ) {
+          if ( val.toLowerCase() === 'type' || val.toLowerCase() === '[type]' ) {
+            blocks[ methodName ].returns[ key ] = 'anytype';
+          }
+        } );
+      }
+      checkClassProperty( blocks[ methodName ], className, methodName, staticProp );
+
     } else {
-      throw new Error( "comment blocks can only be defined in functions that returns object" );
+      throw new Error( "I see death people." );
     }
-    */
+    // if we have classProperties it means that we must put this method there
+    if ( _isDef( classProperties ) ) {
+      classProperties[ methodName ] = blocks[ methodName ];
+    }
+    return [ methodName, blocks[ methodName ] ];
+  }
+
+
+  function prepareProperty( oneCommentBlockStr, sourceObject, classId, classProperties ) {
+
+    var className = sourceObject.className;
+    var obj = sourceObject.obj;
+    var blocks = {};
+    var propertyReg = new RegExp( PROPERTY_REG, "gim" );
+    var propertyObj;
+    var propertyName;
+    var staticProp = false;
+    if ( !_isDef( classId ) ) {
+      staticProp = true;
+    }
+
+    propertyObj = propertyReg.exec( oneCommentBlockStr );
+    if ( _isDef( propertyObj ) ) {
+      propertyName = propertyObj[ 2 ];
+
+      if ( !staticProp ) {
+        if ( !canOverride( classProperties, methodName, classId ) ) {
+          throw new Error( "Cannot override '" + methodName + "' property." );
+        }
+      }
+
+      blocks[ propertyName ] = {};
+      blocks[ propertyName ].str = oneCommentBlockStr;
+      blocks[ propertyName ].types = propertyObj[ 1 ].split( '|' );
+      blocks[ propertyName ].value = obj[ propertyName ];
+
+      // ---------------- IMPORTANT ------------------
+      blocks[ propertyName ].classId = 'static:' + className;
+      if ( _isDef( classId ) ) {
+        blocks[ propertyName ].classId = classId;
+      }
+      blocks[ propertyName ].className = className;
+
+      // ---------------- IMPORTANT ------------------
+
+      if ( _isDef( propertyObj[ 3 ] ) ) {
+        // declaration is an array 3 and 4['public','final']
+        declarations = [ propertyObj[ 3 ] ];
+        if ( _isDef( propertyObj[ 4 ] ) ) {
+          declarations.push( propertyObj[ 4 ] );
+        }
+        if ( staticProp && declarations.indexOf( 'static' ) === -1 ) {
+          throw new Error( "It should  be static property or classId is undefined." );
+        }
+        if ( checkDeclarations( declarations, className, propertyName, false ) ) {
+          blocks[ propertyName ].declarations = declarations;
+        }
+        // public only when undeclared
+      } else if ( !_isDef( blocks[ propertyName ].declarations ) ) {
+        blocks[ propertyName ].declarations = [ 'public' ];
+      }
+    } else {
+      throw new Error( "I see death people." );
+    }
+
+    checkClassProperty( blocks[ propertyName ], className, propertyName, staticProp );
+
+    if ( _isDef( classProperties ) ) {
+      classProperties[ propertyName ] = blocks[ propertyName ];
+    }
+    return [ propertyName, blocks[ propertyName ] ];
+  }
+
+
+  function parseComments( sourceObject, className, regex, classId, classProperties ) {
+
+    if ( regex === null ) {
+      regex = METHOD_PROPERTY;
+    }
+    var str = sourceObject.str;
+    var obj = sourceObject.obj;
+    var regblock = new RegExp( COMMENT_BLOCK, "gim" );
+    var regmp = new RegExp( regex, "gim" );
+    var mp = '';
+    var proptype = '';
+    var propname = '';
+    var tmp = [];
+    var cleanStr = '';
+    var result = {}; //object with declarations types and so on
+    var method, property;
 
     while ( _isDef( tmp ) ) {
-      method.lastIndex = 0;
-      property.lastIndex = 0;
-
-      tmp = commentBlock.exec( str );
+      tmp = regblock.exec( str );
       if ( _isDef( tmp ) ) {
-        parsed = String( tmp[ 1 ] ).
-        replace( /^[\t\*]+/gim, '' ).
-        replace( /[\*]+/gim, '' ).
-        replace( /^[ \t\n]{2,50}/gi, '' ).
-        replace( /\n/gi, '' ).
-        replace( /(\@)/gi, "\n$1" ).
-        replace( /^\s+/gim, '' ).
-        replace( /\s+$/gim, '' );
-        //checking out method name if this is method
-        methodObj = method.exec( parsed );
+        cleanStr = cleanOutCommentBlock( tmp );
+        regmp.lastIndex = 0;
+        mp = regmp.exec( cleanStr );
+        if ( _isDef( mp ) ) {
+          proptype = mp[ 1 ].trim();
+          propname = mp[ 2 ].trim();
+          result[ propname ] = {};
 
-        // if property is an method
-        if ( _isDef( methodObj ) ) {
-          //console.log('creating property',methodName,classId);
-          methodName = methodObj[ 1 ];
-
-          // check if declared property is defined in object
-          if ( !_isDef( obj[ methodName ] ) ) {
-            throw new Error( "Property '" + methodName + "' is declared but not defined in [ " + className +
-              " ] class." );
+          if ( proptype === 'method' ) {
+            method = prepareMethod( cleanStr, sourceObject, classId, classProperties );
+            result[ method[ 0 ] ] = method[ 1 ];
+          } else if ( proptype === 'property' ) {
+            property = prepareProperty( cleanStr, sourceObject, classId, classProperties );
+            result[ property[ 0 ] ] = property[ 1 ];
           }
-
-          if ( !canOverride( classProperties, methodName, classId ) ) {
-            throw new Error( "Cannot override '" + methodName + "' method." );
+          if ( typeof obj[ propname ] === 'undefined' ) {
+            throw new Error( "Class " + proptype + " [ " + propname + " ] is declared but not defined in [ " +
+              className + " ] class." );
           }
-
-          blocks[ methodName ] = {
-            'types': [ 'function' ]
-          };
-
-          // ---------------- IMPORTANT ------------------
-
-          blocks[ methodName ].classId = classId;
-          blocks[ methodName ].className = className;
-          blocks[ methodName ].value = obj[ methodName ];
-
-          // ---------------- IMPORTANT ------------------
-
-
-          if ( methodObj.length === 4 ) {
-            if ( _isDef( methodObj[ 2 ] ) ) {
-              // declaration is an array like ['public','static']
-              declarations = [ methodObj[ 2 ] ];
-
-              if ( _isDef( methodObj[ 3 ] ) ) {
-                declarations.push( methodObj[ 3 ] );
-              }
-              if ( checkDeclarations( declarations, className, methodName, true ) ) {
-                blocks[ methodName ].declarations = declarations;
-              }
-              //define public property only when they are undeclared
-            } else if ( !_isDef( blocks[ methodName ].declarations ) ) {
-              blocks[ methodName ].declarations = [ 'public' ];
-            }
-          }
-          blocks[ methodName ].str = parsed;
-
-          generateArgumentTypes( blocks[ methodName ] );
-
-          // if this is a method it should have a return value
-          returnObj = returns.exec( parsed );
-          if ( _isDef( returnObj ) ) {
-            blocks[ methodName ].returns = returnObj[ 1 ].split( '|' );
-            forEach( blocks[ methodName ].returns, function ( val, key ) {
-              if ( val.toLowerCase() === 'type' || val.toLowerCase() === '[type]' ) {
-                blocks[ methodName ].returns[ key ] = 'anytype';
-              }
-            } );
-          }
-
-          checkClassProperty( blocks[ methodName ], className, methodName );
-
-        } else {
-          // if property is property
-          propertyObj = property.exec( parsed );
-
-          if ( _isDef( propertyObj ) ) {
-            propertyName = propertyObj[ 2 ];
-
-            if ( !canOverride( classProperties, methodName, classId ) ) {
-              throw new Error( "Cannot override '" + methodName + "' property." );
-            }
-
-            blocks[ propertyName ] = {};
-            blocks[ propertyName ].str = parsed;
-            blocks[ propertyName ].types = propertyObj[ 1 ].split( '|' );
-            blocks[ propertyName ].value = obj[ propertyName ];
-
-            // ---------------- IMPORTANT ------------------
-
-            blocks[ propertyName ].classId = classId;
-            blocks[ propertyName ].className = className;
-
-            // ---------------- IMPORTANT ------------------
-
-            if ( _isDef( propertyObj[ 3 ] ) ) {
-              // declaration is an array 3 and 4['public','static']
-              declarations = [ propertyObj[ 3 ] ];
-              if ( _isDef( propertyObj[ 4 ] ) ) {
-                declarations.push( propertyObj[ 4 ] );
-              }
-              if ( checkDeclarations( declarations, className, propertyName, false ) ) {
-                blocks[ propertyName ].declarations = declarations;
-              }
-              // public only when undeclared
-            } else if ( !_isDef( blocks[ propertyName ].declarations ) ) {
-              blocks[ propertyName ].declarations = [ 'public' ];
-            }
-          }
-
-          checkClassProperty( blocks[ propertyName ], className, propertyName );
 
         }
 
       }
     }
-    return blocks;
-  };
+    return result;
+  }
+
+  function resolveStatic( obj, constructor ) {
+    var staticValues = {};
+
+    forEach( obj, function ( property, name ) {
+      staticValues[ name ] = property.value;
+      Object.defineProperty( constructor, name, {
+        enumerable: true,
+        get: function () {
+          if( typeof property.value === 'function' ){
+              return property.value.bind(staticValues);
+          }else{
+            return property.value;
+          }
+        }
+      } );
+    } );
+  }
 
 
   /**
@@ -887,7 +954,7 @@ var cls = ( function () {
    *          data contains: classId, value, declarations, types, arguments, returns
    * @returns {object} classProperty
    */
-  function checkClassProperty( data, className, propertyName ) {
+  function checkClassProperty( data, className, propertyName, staticProp ) {
 
     var self = this;
     var posibleDeclarations = [ 'public', 'protected', 'private', 'static', 'const', 'final' ];
@@ -895,8 +962,13 @@ var cls = ( function () {
 
     if ( _isDef( data ) ) {
 
-      if ( !_isDef( data.classId ) ) {
-        throw new Error( "classId is not defined" );
+      if ( !_isDef( staticProp ) ) {
+        staticProp = false;
+      }
+      if ( !staticProp ) {
+        if ( !_isDef( data.classId ) ) {
+          throw new Error( "classId is not defined" );
+        }
       }
       /* value can be undefined of corse
       if (!_isDef(data.value)) {
@@ -956,8 +1028,8 @@ var cls = ( function () {
         data.arguments = [];
       }
 
-      if( _type(data.value) === 'function'){
-        if(_type(data.arguments) === 'undefined'){
+      if ( _type( data.value ) === 'function' ) {
+        if ( _type( data.arguments ) === 'undefined' ) {
           data.arguments = [];
         }
       }
@@ -1008,11 +1080,9 @@ var cls = ( function () {
 
 
     // !IMPORTANT    -------    here properties are set if they have commentBlock
-    // if some property doesnt haver coment block then it is created below in foreach
+    // if some property doesn't have coment block then it is created below in foreach
 
-    getCommentBlocks( sourceObject, className, classId, classProperties );
-
-
+    parseComments( sourceObject, className, null, classId, classProperties );
 
     // setting up property.value and default parameters if needed
     forEach( obj, function ( value, name ) {
@@ -1051,7 +1121,7 @@ var cls = ( function () {
     } else {
 
       if ( _isType( classProperties[ propertyName ], 'final' ) || _isType( classProperties[ propertyName ],
-          'const' ) ) {
+          'const' ) || _isType( classProperties[ propertyName ], 'static' ) ) {
         throw new Error( "Cannot override '" + propertyName + "'." );
         return false;
       } else {
@@ -1069,11 +1139,13 @@ var cls = ( function () {
    * @param   {[type]} data [description]
    * @returns {[type]} [description]
    */
-  function _addToClassProperties( classProperties, name, data,classId ) {
-    if( _type(data) === 'undefined' || _type(data) === 'null'){
-      throw new Error("Cannot add property from empty object.");
+  function _addToClassProperties( classProperties, name, data, classId ) {
+    if ( _type( data ) === 'undefined' || _type( data ) === 'null' ) {
+      throw new Error( "Cannot add property from empty object." );
     }
-    if( _type(data.classId) === 'undefined'){data.classId = classId; }
+    if ( _type( data.classId ) === 'undefined' ) {
+      data.classId = classId;
+    }
     var obj = getObject( classId );
     var facade = obj.classFacade;
     var className = facade.getClassName();
@@ -1092,9 +1164,12 @@ var cls = ( function () {
    * @param   {[type]} classProperties [description]
    * @returns {[type]} [description]
    */
-  function classPropertiesFromObject( className, source, classId, classProperties ) {
+  function classPropertiesFromObject( className, sourceObject, classId, classProperties ) {
+    throw new Error( "creating classes from objects is not yet implemented" );
+    var classObj = getObject( classId );
+    var facade = classObj.classFacade;
 
-    forEach( source, function ( val, name ) {
+    forEach( sourceObject.obj, function ( val, name ) {
       _addToClassProperties( classProperties, name, val, classId );
     } );
     return classProperties;
@@ -1119,7 +1194,7 @@ var cls = ( function () {
     if ( _type( sourceObject.source ) === 'function' ) {
       classPropertiesFromFunction( className, sourceObject, classId, classProperties );
     } else if ( _type( sourceObject.source ) === 'object' ) {
-      classPropertiesFromObject( className, sourceObject.object, classId, classProperties );
+      classPropertiesFromObject( className, sourceObject, classId, classProperties );
     }
 
     return classProperties;
@@ -1194,13 +1269,13 @@ var cls = ( function () {
       } );
     }
   };
-  Object.defineProperty(clsClassInstance.prototype,'___addPublicProperty',{
-    enumerable:false,
-    configureable:false,
-    get:function(){
+  Object.defineProperty( clsClassInstance.prototype, '___addPublicProperty', {
+    enumerable: false,
+    configureable: false,
+    get: function () {
       return ___addPublicProperty;
     }
-  });
+  } );
 
 
   /**
@@ -1314,13 +1389,13 @@ var cls = ( function () {
     // we cannot add property to instance here because it may not exists yet
     // instaces will have their own prototype function to adding public properties
   };
-  Object.defineProperty(clsClassFacade.prototype,'___addProperty',{
-    enumerable:false,
-    configureable:false,
-    get:function(){
+  Object.defineProperty( clsClassFacade.prototype, '___addProperty', {
+    enumerable: false,
+    configureable: false,
+    get: function () {
       return ___addProperty;
     }
-  })
+  } )
 
   /**
    * dynamically add property to class instance like mixin with only one property
@@ -1330,23 +1405,23 @@ var cls = ( function () {
    * @param  {string}      propertyName [description]
    * @param  {object}      data         [description]
    */
-  function addToInstance(propertyName,data){
+  function addToInstance( propertyName, data ) {
     var classId = this.getClassId();
-    var obj = getObject(classId);
+    var obj = getObject( classId );
     var instance = obj.classInstance;
 
-    this.___addProperty(propertyName,data,true,classId);
-    if( data.declarations.indexOf('public') !== -1){
-      instance.___addPublicProperty(propertyName);
+    this.___addProperty( propertyName, data, true, classId );
+    if ( data.declarations.indexOf( 'public' ) !== -1 ) {
+      instance.___addPublicProperty( propertyName );
     }
   }
-  Object.defineProperty(clsClassFacade.prototype,'addToInstance',{
-    enumerable:false,
-    configureable:false,
-    get:function(){
+  Object.defineProperty( clsClassFacade.prototype, 'addToInstance', {
+    enumerable: false,
+    configureable: false,
+    get: function () {
       return addToInstance;
     }
-  });
+  } );
 
   /**
    * runtime mixin inside class instance
@@ -1356,19 +1431,19 @@ var cls = ( function () {
    * @param   {[type]} obj [description]
    * @returns {[type]}     [description]
    */
-  function mixWithObject(obj){
+  function mixWithObject( obj ) {
     var self = this;
-    forEach(obj,function(val,name){
-      self.addToInstance(name,val);
-    });
+    forEach( obj, function ( val, name ) {
+      self.addToInstance( name, val );
+    } );
   }
-  Object.defineProperty(clsClassFacade.prototype,'mixWithObject',{
-    enumerable:false,
-    configureable:false,
-    get:function(){
+  Object.defineProperty( clsClassFacade.prototype, 'mixWithObject', {
+    enumerable: false,
+    configureable: false,
+    get: function () {
       return mixWithObject;
     }
-  });
+  } );
 
 
   /**
@@ -1379,26 +1454,26 @@ var cls = ( function () {
    * @param   {[type]} propertyName [description]
    * @returns {[type]}              [description]
    */
-   function getInternalProperty(propertyName){
-     var classId = this.getClassId();
-     var className = this.getClassName();
-     var obj = getObject(classId);
-     var properties = obj.classProperties;
-     if( _isDef(properties[propertyName])){
+  function getInternalProperty( propertyName ) {
+    var classId = this.getClassId();
+    var className = this.getClassName();
+    var obj = getObject( classId );
+    var properties = obj.classProperties;
+    if ( _isDef( properties[ propertyName ] ) ) {
 
-       return properties[ propertyName ];
+      return properties[ propertyName ];
 
-     }else{
-       throw new Error("Property '"+propertyName+"' doesn't exists in [ "+className+" ] class.");
-     }
-   }
-  Object.defineProperty(clsClassFacade.prototype,'getInternalProperty',{
-    enumerable:false,
-    configureable:false,
-    get:function(){
+    } else {
+      throw new Error( "Property '" + propertyName + "' doesn't exists in [ " + className + " ] class." );
+    }
+  }
+  Object.defineProperty( clsClassFacade.prototype, 'getInternalProperty', {
+    enumerable: false,
+    configureable: false,
+    get: function () {
       return getInternalProperty;
     }
-  });
+  } );
 
 
   /**
@@ -1409,20 +1484,20 @@ var cls = ( function () {
    * @param   {[type]} propertyName [description]
    * @returns {[type]}              [description]
    */
-  function getInternalProperties(){
+  function getInternalProperties() {
     var classId = this.getClassId();
     var className = this.getClassName();
-    var obj = getObject(classId);
+    var obj = getObject( classId );
     var properties = obj.classProperties;
     return properties;
   }
-  Object.defineProperty(clsClassFacade.prototype,'getInternalProperties',{
-    enumerable:false,
-    configureable:false,
-    get:function(){
+  Object.defineProperty( clsClassFacade.prototype, 'getInternalProperties', {
+    enumerable: false,
+    configureable: false,
+    get: function () {
       return getInternalProperties;
     }
-  });
+  } );
 
   /**
    * constructor for classData object
@@ -1504,7 +1579,7 @@ var cls = ( function () {
       throw new Error( "There is no property like " + propertyName + " in " + className );
     }
     var property = this.classProperties[ propertyName ];
-    //console.log('getting', propertyName, 'from', className, classId);
+    //console.log('getting', propertyName, 'from', className, classId,property.declarations);
 
     if ( _isDef( property ) ) {
 
@@ -1720,6 +1795,7 @@ var cls = ( function () {
 
   };
 
+  var __definedClasses = {};
   var __allClasses = {}; // all classes goes here waiting to be extended / mixed
 
 
@@ -1737,165 +1813,221 @@ var cls = ( function () {
     var classId = facade.getClassId();
     var obj = getObject( classId );
     var className = facade.getCurrentClassName();
+    var result;
 
     // if we have constructor we can fire it because if we are here it means that instance is createNested
     // if we are collecting classes to extend no constructor will fire only when new instance is created
     // constructor will fire it - when all classes are prepared and ready to instantiate
     if ( _isDef( facade[ className ] ) && obj.classProperties[ className ].classId === classId ) {
-      facade[ className ].apply( facade, args );
+      result = facade[ className ].apply( facade, args );
     } else if ( facade.parent !== '' ) {
       classId = facade.parent;
       obj = getObject( classId );
       instance = obj.classInstance;
       facade = obj.classFacade;
-      fireConstructor( instance, args );
+      result = fireConstructor( instance, args );
     }
+    return result;
   }
 
-  function stackTrace(skip){
+  function stackTrace( skip ) {
     //TODO correct stack trace differences between browsers
     var stack = '';
-    try { var a = {}; a.debug(); } catch(ex) {stack = ex.stack;}
-    var arr = stack.split("\n").slice(skip);
-    return arr.join("\n");
+    try {
+      var a = {};
+      a.debug();
+    } catch ( ex ) {
+      stack = ex.stack;
+    }
+    var arr = stack.split( "\n" ).slice( skip );
+    return arr.join( "\n" );
   }
 
-  function fnToStrings(obj){
-    var type= _type(obj);
+  function fnToStrings( obj ) {
+    var type = _type( obj );
     type = type.toLowerCase();
-    if( type === 'function'){
-      var stack = stackTrace(9);
-      var preStr= "cls.function:/*\ncompressed function from:\n"+stack+"*/\n";
-      return preStr+obj.toString();
+    if ( type === 'function' ) {
+      //var stack = stackTrace(9);
+      var preStr = "cls.function:/*\ncompressed function*/\n";
+      return preStr + obj.toString();
     }
-    if( type === 'object' || type === 'array'){
-      var iterate = _clone(obj);
+    if ( type === 'object' || type === 'array' ) {
+      var iterate = _clone( obj );
       var result;
-      if( type === 'object'){result = {};}
-      if( type === 'array'){result = [];}
-      forEach(iterate,function(val,name){
-        result[name] = fnToStrings(val);
-        console.log('adding',result[name]);
-      });
+      if ( type === 'object' ) {
+        result = {};
+      }
+      if ( type === 'array' ) {
+        result = [];
+      }
+      forEach( iterate, function ( val, name ) {
+        result[ name ] = fnToStrings( val );
+      } );
       return result;
     }
     // if not a function just return original obj
     return obj;
   }
 
-  cls.compress = function clsCompress(anything){
-    var result = fnToStrings(anything);
-    console.log("zestringowane",result);
-    var json = JSON.stringify(result);
-    return LZString.compress(json);
+  cls.compress = function clsCompress( anything ) {
+
+    if( _isDef(anything.isConstructor ) ){
+      return anything.compress();
+    }
+    var result = fnToStrings( anything );
+    var json = JSON.stringify( result );
+    return LZString.compress( json );
   }
 
 
-  function StringsToFn(obj){
-    var type=_type(obj);
+  function StringsToFn( obj ) {
+    var type = _type( obj );
     type = type.toLowerCase();
-    if( type === 'string'){
+    if ( type === 'string' ) {
       // check whether we have a function or simple string
-      if(obj.substr(0,13) === 'cls.function:'){
-        var str = obj.substr(13);
-        var fn = eval("("+str+")");
+      if ( obj.substr( 0, 13 ) === 'cls.function:' ) {
+        var str = obj.substr( 13 );
+        var fn = eval( "(" + str + ")" );
         return fn;
       }
     }
-    if( type === 'object' || type === 'array'){
+    if ( type === 'object' || type === 'array' ) {
       var result;
-      if( type === 'object'){result={};}
-      if( type ==='array'){result =[];}
-      forEach(obj,function(val,name){
-        result[name]=StringsToFn(val);
-      });
+      if ( type === 'object' ) {
+        result = {};
+      }
+      if ( type === 'array' ) {
+        result = [];
+      }
+      forEach( obj, function ( val, name ) {
+        result[ name ] = StringsToFn( val );
+      } );
       return result;
     }
     return obj;
   }
 
 
-  cls.decompress = function clsDecompress(str){
-    str= LZString.decompress(str);
-    var obj = JSON.parse(str);
-    var result = StringsToFn(obj);
+  cls.decompress = function clsDecompress( str ) {
+    str = LZString.decompress( str );
+    var obj = JSON.parse( str );
+    var result;
+    if( _isDef(obj.__compressedClass) ){
+      result = buildFromStringObjects( obj.__compressedClass );
+    }else{
+      result = StringsToFn( obj );
+    }
     return result;
   }
 
-  function compressExtend(){
-
-    var result = {};
+  function compressExtend() {
+    var compressedClass = {
+      __compressedClass:{}
+    };
+    var result = compressedClass.__compressedClass;
     var self = this;
     result.name = this.___className;
-    result.type  = this.___type;
+    result.type = this.___type;
 
     var firstClass = this.___firstClass;
     var secondClass = this.___secondClass;
 
 
     result.data = {
-      firstClass: compress.call(firstClass,true),
-      secondClass: compress.call(secondClass,true)
+      firstClass: compress.call( firstClass, true ),
+      secondClass: compress.call( secondClass, true )
     }
-    return result;
+    return compressedClass;
 
   }
 
-  function compressClass(){
-    var result = {};
+  function compressClass() {
+    var compressedClass = {
+      __compressedClass:{}
+    };
+    var result = compressedClass.__compressedClass;
     var self = this;
     result.name = this.___className;
-    result.type  = this.___type;
+    result.type = this.___type;
 
     var toCompress = this.___source;
     var data = toCompress.toString();
-    data = /^function\s[^\{]+\{(?:\s+)?return\s?([^$]+)\s?\}$/gi.exec(data);
-    data = data[1];
+    data = /^function\s[^\{]+\{(?:\s+)?return\s?([^$]+)\s?\}$/gi.exec( data );
+    data = data[ 1 ];
     result.data = data;
-    return result;
+    return compressedClass;
   }
 
-  function compress(waitForNow){
+  function compress( waitForNow ) {
     var result;
-    if(this.___type === 'class'){ result = compressClass.call(this); }
-    if(this.___type === 'extend'){ result = compressExtend.call(this); }
-    if(!_isDef(waitForNow)){
-      result= JSON.stringify(result);
-      result = LZString.compress(result);
+    if ( this.___type === 'class' ) {
+      result = compressClass.call( this );
+    }
+    if ( this.___type === 'extend' ) {
+      result = compressExtend.call( this );
+    }
+    if ( !_isDef( waitForNow ) ) {
+      result = JSON.stringify( result );
+      result = LZString.compress( result );
       this.compressed = result;
     }
     return result;
   }
 
-  function stringToFunction(str){
-    return new Function("return "+str);
+  function stringToFunction( str ) {
+    return new Function( "return " + str );
   }
 
-  function buildFromStringObjects(obj){
+  function buildFromStringObjects( obj ) {
     var result;
-    if( obj.type === 'class'){
-      result = cls.class(obj.name,stringToFunction(obj.data));
+    if ( obj.type === 'class' ) {
+      result = _class( obj.name, stringToFunction( obj.data ), true );
     }
-    if( obj.type === 'extend'){
-      var first = buildFromStringObjects( obj.data.firstClass );
-      var second = buildFromStringObjects( obj.data.secondClass );
-      result = cls.extend(first,second);
+    if ( obj.type === 'extend' ) {
+      var first = buildFromStringObjects( obj.data.firstClass.__compressedClass );
+      var second = buildFromStringObjects( obj.data.secondClass.__compressedClass );
+      result = cls.extend( first, second );
     }
     return result;
   }
 
-  function decompress(){
+  function decompress() {
     var str = this.compressed;
-    if(str === ''){
-      throw new Error("Class is not compressed.");
+    if ( str === '' ) {
+      throw new Error( "Class is not compressed." );
     }
-    var json = LZString.decompress(str);
-    var obj = JSON.parse(json);
+    var json = LZString.decompress( str );
+    var obj = JSON.parse( json );
     // we must build classes again form source objects ;)
-    var result = buildFromStringObjects(obj);
+    var result = buildFromStringObjects( obj.__compressedClass );
     return result;
   }
 
+  function rget( o1, name, value ) {
+    Object.defineProperty( o1, name, {
+      enumerable: false,
+      get: function () {
+        return value;
+      }
+    } )
+  }
+
+  function rwget( o1, name, value ) {
+    var prv = value;
+    Object.defineProperty( o1, name, {
+      enumerable: false,
+      get: function () {
+        return prv;
+      },
+      set: function ( newVal ) {
+        prv = newVal;
+      }
+    } )
+  }
+
+  cls.class = function ( className, source ) {
+    return _class( className, source, false );
+  }
 
   /**
    * classCreator
@@ -1903,13 +2035,28 @@ var cls = ( function () {
    * @param  {object} source              [description]
    * @return {classConstructor}           [description]
    */
-  cls.class = function ( className, source ) {
+  function _class( className, source, weAreDecompressing ) {
 
     var sourceType = '',
-      nameType = '';
+      nameType = '',
+      str = '',
+      obj = {},
+      sourceObject = {},
+      definedNames = Object.keys( __definedClasses );
 
     if ( !_isDef( className ) && !_isDef( source ) ) {
       throw new Error( "There is no source for class creation." );
+    }
+
+    if ( weAreDecompressing ) {
+      if ( definedNames.indexOf( className ) !== -1 ) {
+        console.warn( "Class decompression: Class [ " + className + " ] is already defined." );
+        return __definedClasses[ className ];
+      }
+    } else {
+      if ( definedNames.indexOf( className ) !== -1 ) {
+        throw new Error( "Class [ " + className + " ] is already defined." );
+      }
     }
 
     nameType = _type( className );
@@ -1926,31 +2073,47 @@ var cls = ( function () {
 
     sourceType = _type( source );
 
+    str = source.toString();
+    obj = source();
+    sourceObject = {
+      'className': className,
+      'source': source,
+      'str': str,
+      'obj': obj
+    };
+
     if ( sourceType !== 'function' && sourceType !== 'object' ) {
-      throw new Error( "Source for class creation must be a function or specially prepared object." );
+      throw new Error( "Source for class creation must be inline function or specially prepared object." );
     }
 
     var constructor = function classConstructor() {
       var args = arguments;
       var instance = cls.create( className, source );
       var result = fireConstructor( instance, args );
-      if(_type(result) === 'undefined'){
+      if ( _type( result ) === 'undefined' ) {
         return instance;
-      }else{
+      } else {
         return result;
       }
     }
 
+    rget( constructor, '___type', 'class' );
+    rget( constructor, '___source', source );
+    rget( constructor, '___sourceObject', sourceObject );
+    rget( constructor, '___className', className );
+    rget( constructor, '___arguments', arguments );
+    rget( constructor, 'isConstructor', true );
+    rget( constructor, 'extend', constructorExtend.bind( constructor ) );
+    rwget( constructor, 'compressed', '' );
+    rget( constructor, 'compress', compress.bind( constructor ) );
+    //rget( constructor, 'decompress', decompress.bind( constructor ) );
 
-    constructor.___type = 'class';
-    constructor.___source = source;
-    constructor.___className = className;
-    constructor.___arguments = arguments;
-    constructor.isConstructor = true;
-    constructor.extend = constructorExtend.bind( constructor );
-    constructor.compressed = '';
-    constructor.compress = compress.bind(constructor);
-    constructor.decompress = decompress.bind(constructor);
+    var staticProps = parseComments( sourceObject, className, STATIC_METHOD_PROPERTY );
+    rget( constructor, '___static', staticProps );
+    resolveStatic( staticProps, constructor );
+
+    __definedClasses[ className ] = constructor;
+
     return constructor;
   }
 
@@ -2025,6 +2188,7 @@ var cls = ( function () {
 
     str = source.toString();
     sourceObject = {
+      'className': className,
       'source': source,
       'str': str,
       'obj': obj
@@ -2245,23 +2409,29 @@ var cls = ( function () {
       var args = arguments;
       var instance = _extend( firstClass, secondClass );
       var result = fireConstructor( instance, args );
-      if( _type(result) === 'undefined'){
+      if ( _type( result ) === 'undefined' ) {
         return instance;
-      }else{
+      } else {
         return result;
       }
     }
 
     // if we want another extend we must have source for creation purpose
-    constructor.___firstClass = firstClass;
-    constructor.___secondClass = secondClass;
-    constructor.___arguments = arguments;
-    constructor.___type = 'extend';
-    constructor.___className = secondClass.___className;
-    constructor.isConstructor = true;
-    constructor.extend = constructorExtend.bind( constructor );
-    constructor.compress = compress.bind(constructor);
-    constructor.decompress = decompress.bind(constructor);
+    rget( constructor, '___firstClass', firstClass );
+    rget( constructor, '___secondClass', secondClass );
+    rget( constructor, '___arguments', arguments );
+    rget( constructor, '___type', 'extend' );
+    rget( constructor, '___className', secondClass.___className );
+    rget( constructor, 'isConstructor', true );
+    rget( constructor, 'extend', constructorExtend.bind( constructor ) );
+    rwget( constructor, 'compressed', '' );
+    rget( constructor, 'compress', compress.bind( constructor ) );
+    //rget( constructor, 'decompress', decompress.bind( constructor ) );
+
+    var staticProps = _merge( firstClass.___static, secondClass.___static );
+    rget( constructor, '___static', staticProps );
+    resolveStatic( staticProps, constructor );
+
     return constructor;
   }
 
@@ -2324,150 +2494,253 @@ var cls = ( function () {
   // http://pieroxy.net/blog/pages/lz-string/testing.html
   //
   // LZ-based compression algorithm, version 1.4.4
-  var LZString = (function() {
+  var LZString = ( function () {
 
-  // private property
-  var f = String.fromCharCode;
-  var keyStrBase64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-  var keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
-  var baseReverseDic = {};
+    // private property
+    var f = String.fromCharCode;
+    var keyStrBase64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+    var keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
+    var baseReverseDic = {};
 
-  function getBaseValue(alphabet, character) {
-    if (!baseReverseDic[alphabet]) {
-      baseReverseDic[alphabet] = {};
-      for (var i=0 ; i<alphabet.length ; i++) {
-        baseReverseDic[alphabet][alphabet.charAt(i)] = i;
+    function getBaseValue( alphabet, character ) {
+      if ( !baseReverseDic[ alphabet ] ) {
+        baseReverseDic[ alphabet ] = {};
+        for ( var i = 0; i < alphabet.length; i++ ) {
+          baseReverseDic[ alphabet ][ alphabet.charAt( i ) ] = i;
+        }
       }
+      return baseReverseDic[ alphabet ][ character ];
     }
-    return baseReverseDic[alphabet][character];
-  }
 
-  var LZString = {
-    compressToBase64 : function (input) {
-      if (input == null) return "";
-      var res = LZString._compress(input, 6, function(a){return keyStrBase64.charAt(a);});
-      switch (res.length % 4) { // To produce valid Base64
-      default: // When could this happen ?
-      case 0 : return res;
-      case 1 : return res+"===";
-      case 2 : return res+"==";
-      case 3 : return res+"=";
-      }
-    },
+    var LZString = {
+      compressToBase64: function ( input ) {
+        if ( input == null ) return "";
+        var res = LZString._compress( input, 6, function ( a ) {
+          return keyStrBase64.charAt( a );
+        } );
+        switch ( res.length % 4 ) { // To produce valid Base64
+          default: // When could this happen ?
+          case 0:
+            return res;
+        case 1:
+            return res + "===";
+        case 2:
+            return res + "==";
+        case 3:
+            return res + "=";
+        }
+      },
 
-    decompressFromBase64 : function (input) {
-      if (input == null) return "";
-      if (input == "") return null;
-      return LZString._decompress(input.length, 32, function(index) { return getBaseValue(keyStrBase64, input.charAt(index)); });
-    },
+      decompressFromBase64: function ( input ) {
+        if ( input == null ) return "";
+        if ( input == "" ) return null;
+        return LZString._decompress( input.length, 32, function ( index ) {
+          return getBaseValue( keyStrBase64, input.charAt( index ) );
+        } );
+      },
 
-    compressToUTF16 : function (input) {
-      if (input == null) return "";
-      return LZString._compress(input, 15, function(a){return f(a+32);}) + " ";
-    },
+      compressToUTF16: function ( input ) {
+        if ( input == null ) return "";
+        return LZString._compress( input, 15, function ( a ) {
+          return f( a + 32 );
+        } ) + " ";
+      },
 
-    decompressFromUTF16: function (compressed) {
-      if (compressed == null) return "";
-      if (compressed == "") return null;
-      return LZString._decompress(compressed.length, 16384, function(index) { return compressed.charCodeAt(index) - 32; });
-    },
+      decompressFromUTF16: function ( compressed ) {
+        if ( compressed == null ) return "";
+        if ( compressed == "" ) return null;
+        return LZString._decompress( compressed.length, 16384, function ( index ) {
+          return compressed.charCodeAt( index ) - 32;
+        } );
+      },
 
-    //compress into uint8array (UCS-2 big endian format)
-    compressToUint8Array: function (uncompressed) {
-      var compressed = LZString.compress(uncompressed);
-      var buf=new Uint8Array(compressed.length*2); // 2 bytes per character
+      //compress into uint8array (UCS-2 big endian format)
+      compressToUint8Array: function ( uncompressed ) {
+        var compressed = LZString.compress( uncompressed );
+        var buf = new Uint8Array( compressed.length * 2 ); // 2 bytes per character
 
-      for (var i=0, TotalLen=compressed.length; i<TotalLen; i++) {
-        var current_value = compressed.charCodeAt(i);
-        buf[i*2] = current_value >>> 8;
-        buf[i*2+1] = current_value % 256;
-      }
-      return buf;
-    },
+        for ( var i = 0, TotalLen = compressed.length; i < TotalLen; i++ ) {
+          var current_value = compressed.charCodeAt( i );
+          buf[ i * 2 ] = current_value >>> 8;
+          buf[ i * 2 + 1 ] = current_value % 256;
+        }
+        return buf;
+      },
 
-    //decompress from uint8array (UCS-2 big endian format)
-    decompressFromUint8Array:function (compressed) {
-      if (compressed===null || compressed===undefined){
-          return LZString.decompress(compressed);
-      } else {
-          var buf=new Array(compressed.length/2); // 2 bytes per character
-          for (var i=0, TotalLen=buf.length; i<TotalLen; i++) {
-            buf[i]=compressed[i*2]*256+compressed[i*2+1];
+      //decompress from uint8array (UCS-2 big endian format)
+      decompressFromUint8Array: function ( compressed ) {
+        if ( compressed === null || compressed === undefined ) {
+          return LZString.decompress( compressed );
+        } else {
+          var buf = new Array( compressed.length / 2 ); // 2 bytes per character
+          for ( var i = 0, TotalLen = buf.length; i < TotalLen; i++ ) {
+            buf[ i ] = compressed[ i * 2 ] * 256 + compressed[ i * 2 + 1 ];
           }
 
           var result = [];
-          buf.forEach(function (c) {
-            result.push(f(c));
-          });
-          return LZString.decompress(result.join(''));
+          buf.forEach( function ( c ) {
+            result.push( f( c ) );
+          } );
+          return LZString.decompress( result.join( '' ) );
 
-      }
-
-    },
-
-
-    //compress into a string that is already URI encoded
-    compressToEncodedURIComponent: function (input) {
-      if (input == null) return "";
-      return LZString._compress(input, 6, function(a){return keyStrUriSafe.charAt(a);});
-    },
-
-    //decompress from an output of compressToEncodedURIComponent
-    decompressFromEncodedURIComponent:function (input) {
-      if (input == null) return "";
-      if (input == "") return null;
-      input = input.replace(/ /g, "+");
-      return LZString._decompress(input.length, 32, function(index) { return getBaseValue(keyStrUriSafe, input.charAt(index)); });
-    },
-
-    compress: function (uncompressed) {
-      return LZString._compress(uncompressed, 16, function(a){return f(a);});
-    },
-    _compress: function (uncompressed, bitsPerChar, getCharFromInt) {
-      if (uncompressed == null) return "";
-      var i, value,
-          context_dictionary= {},
-          context_dictionaryToCreate= {},
-          context_c="",
-          context_wc="",
-          context_w="",
-          context_enlargeIn= 2, // Compensate for the first entry which should not count
-          context_dictSize= 3,
-          context_numBits= 2,
-          context_data=[],
-          context_data_val=0,
-          context_data_position=0,
-          ii;
-
-      for (ii = 0; ii < uncompressed.length; ii += 1) {
-        context_c = uncompressed.charAt(ii);
-        if (!Object.prototype.hasOwnProperty.call(context_dictionary,context_c)) {
-          context_dictionary[context_c] = context_dictSize++;
-          context_dictionaryToCreate[context_c] = true;
         }
 
-        context_wc = context_w + context_c;
-        if (Object.prototype.hasOwnProperty.call(context_dictionary,context_wc)) {
-          context_w = context_wc;
-        } else {
-          if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate,context_w)) {
-            if (context_w.charCodeAt(0)<256) {
-              for (i=0 ; i<context_numBits ; i++) {
-                context_data_val = (context_data_val << 1);
-                if (context_data_position == bitsPerChar-1) {
+      },
+
+
+      //compress into a string that is already URI encoded
+      compressToEncodedURIComponent: function ( input ) {
+        if ( input == null ) return "";
+        return LZString._compress( input, 6, function ( a ) {
+          return keyStrUriSafe.charAt( a );
+        } );
+      },
+
+      //decompress from an output of compressToEncodedURIComponent
+      decompressFromEncodedURIComponent: function ( input ) {
+        if ( input == null ) return "";
+        if ( input == "" ) return null;
+        input = input.replace( / /g, "+" );
+        return LZString._decompress( input.length, 32, function ( index ) {
+          return getBaseValue( keyStrUriSafe, input.charAt( index ) );
+        } );
+      },
+
+      compress: function ( uncompressed ) {
+        return LZString._compress( uncompressed, 16, function ( a ) {
+          return f( a );
+        } );
+      },
+      _compress: function ( uncompressed, bitsPerChar, getCharFromInt ) {
+        if ( uncompressed == null ) return "";
+        var i, value,
+          context_dictionary = {},
+          context_dictionaryToCreate = {},
+          context_c = "",
+          context_wc = "",
+          context_w = "",
+          context_enlargeIn = 2, // Compensate for the first entry which should not count
+          context_dictSize = 3,
+          context_numBits = 2,
+          context_data = [],
+          context_data_val = 0,
+          context_data_position = 0,
+          ii;
+
+        for ( ii = 0; ii < uncompressed.length; ii += 1 ) {
+          context_c = uncompressed.charAt( ii );
+          if ( !Object.prototype.hasOwnProperty.call( context_dictionary, context_c ) ) {
+            context_dictionary[ context_c ] = context_dictSize++;
+            context_dictionaryToCreate[ context_c ] = true;
+          }
+
+          context_wc = context_w + context_c;
+          if ( Object.prototype.hasOwnProperty.call( context_dictionary, context_wc ) ) {
+            context_w = context_wc;
+          } else {
+            if ( Object.prototype.hasOwnProperty.call( context_dictionaryToCreate, context_w ) ) {
+              if ( context_w.charCodeAt( 0 ) < 256 ) {
+                for ( i = 0; i < context_numBits; i++ ) {
+                  context_data_val = ( context_data_val << 1 );
+                  if ( context_data_position == bitsPerChar - 1 ) {
+                    context_data_position = 0;
+                    context_data.push( getCharFromInt( context_data_val ) );
+                    context_data_val = 0;
+                  } else {
+                    context_data_position++;
+                  }
+                }
+                value = context_w.charCodeAt( 0 );
+                for ( i = 0; i < 8; i++ ) {
+                  context_data_val = ( context_data_val << 1 ) | ( value & 1 );
+                  if ( context_data_position == bitsPerChar - 1 ) {
+                    context_data_position = 0;
+                    context_data.push( getCharFromInt( context_data_val ) );
+                    context_data_val = 0;
+                  } else {
+                    context_data_position++;
+                  }
+                  value = value >> 1;
+                }
+              } else {
+                value = 1;
+                for ( i = 0; i < context_numBits; i++ ) {
+                  context_data_val = ( context_data_val << 1 ) | value;
+                  if ( context_data_position == bitsPerChar - 1 ) {
+                    context_data_position = 0;
+                    context_data.push( getCharFromInt( context_data_val ) );
+                    context_data_val = 0;
+                  } else {
+                    context_data_position++;
+                  }
+                  value = 0;
+                }
+                value = context_w.charCodeAt( 0 );
+                for ( i = 0; i < 16; i++ ) {
+                  context_data_val = ( context_data_val << 1 ) | ( value & 1 );
+                  if ( context_data_position == bitsPerChar - 1 ) {
+                    context_data_position = 0;
+                    context_data.push( getCharFromInt( context_data_val ) );
+                    context_data_val = 0;
+                  } else {
+                    context_data_position++;
+                  }
+                  value = value >> 1;
+                }
+              }
+              context_enlargeIn--;
+              if ( context_enlargeIn == 0 ) {
+                context_enlargeIn = Math.pow( 2, context_numBits );
+                context_numBits++;
+              }
+              delete context_dictionaryToCreate[ context_w ];
+            } else {
+              value = context_dictionary[ context_w ];
+              for ( i = 0; i < context_numBits; i++ ) {
+                context_data_val = ( context_data_val << 1 ) | ( value & 1 );
+                if ( context_data_position == bitsPerChar - 1 ) {
                   context_data_position = 0;
-                  context_data.push(getCharFromInt(context_data_val));
+                  context_data.push( getCharFromInt( context_data_val ) );
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+                value = value >> 1;
+              }
+
+
+            }
+            context_enlargeIn--;
+            if ( context_enlargeIn == 0 ) {
+              context_enlargeIn = Math.pow( 2, context_numBits );
+              context_numBits++;
+            }
+            // Add wc to the dictionary.
+            context_dictionary[ context_wc ] = context_dictSize++;
+            context_w = String( context_c );
+          }
+        }
+
+        // Output the code for w.
+        if ( context_w !== "" ) {
+          if ( Object.prototype.hasOwnProperty.call( context_dictionaryToCreate, context_w ) ) {
+            if ( context_w.charCodeAt( 0 ) < 256 ) {
+              for ( i = 0; i < context_numBits; i++ ) {
+                context_data_val = ( context_data_val << 1 );
+                if ( context_data_position == bitsPerChar - 1 ) {
+                  context_data_position = 0;
+                  context_data.push( getCharFromInt( context_data_val ) );
                   context_data_val = 0;
                 } else {
                   context_data_position++;
                 }
               }
-              value = context_w.charCodeAt(0);
-              for (i=0 ; i<8 ; i++) {
-                context_data_val = (context_data_val << 1) | (value&1);
-                if (context_data_position == bitsPerChar-1) {
+              value = context_w.charCodeAt( 0 );
+              for ( i = 0; i < 8; i++ ) {
+                context_data_val = ( context_data_val << 1 ) | ( value & 1 );
+                if ( context_data_position == bitsPerChar - 1 ) {
                   context_data_position = 0;
-                  context_data.push(getCharFromInt(context_data_val));
+                  context_data.push( getCharFromInt( context_data_val ) );
                   context_data_val = 0;
                 } else {
                   context_data_position++;
@@ -2476,23 +2749,23 @@ var cls = ( function () {
               }
             } else {
               value = 1;
-              for (i=0 ; i<context_numBits ; i++) {
-                context_data_val = (context_data_val << 1) | value;
-                if (context_data_position ==bitsPerChar-1) {
+              for ( i = 0; i < context_numBits; i++ ) {
+                context_data_val = ( context_data_val << 1 ) | value;
+                if ( context_data_position == bitsPerChar - 1 ) {
                   context_data_position = 0;
-                  context_data.push(getCharFromInt(context_data_val));
+                  context_data.push( getCharFromInt( context_data_val ) );
                   context_data_val = 0;
                 } else {
                   context_data_position++;
                 }
                 value = 0;
               }
-              value = context_w.charCodeAt(0);
-              for (i=0 ; i<16 ; i++) {
-                context_data_val = (context_data_val << 1) | (value&1);
-                if (context_data_position == bitsPerChar-1) {
+              value = context_w.charCodeAt( 0 );
+              for ( i = 0; i < 16; i++ ) {
+                context_data_val = ( context_data_val << 1 ) | ( value & 1 );
+                if ( context_data_position == bitsPerChar - 1 ) {
                   context_data_position = 0;
-                  context_data.push(getCharFromInt(context_data_val));
+                  context_data.push( getCharFromInt( context_data_val ) );
                   context_data_val = 0;
                 } else {
                   context_data_position++;
@@ -2501,18 +2774,18 @@ var cls = ( function () {
               }
             }
             context_enlargeIn--;
-            if (context_enlargeIn == 0) {
-              context_enlargeIn = Math.pow(2, context_numBits);
+            if ( context_enlargeIn == 0 ) {
+              context_enlargeIn = Math.pow( 2, context_numBits );
               context_numBits++;
             }
-            delete context_dictionaryToCreate[context_w];
+            delete context_dictionaryToCreate[ context_w ];
           } else {
-            value = context_dictionary[context_w];
-            for (i=0 ; i<context_numBits ; i++) {
-              context_data_val = (context_data_val << 1) | (value&1);
-              if (context_data_position == bitsPerChar-1) {
+            value = context_dictionary[ context_w ];
+            for ( i = 0; i < context_numBits; i++ ) {
+              context_data_val = ( context_data_val << 1 ) | ( value & 1 );
+              if ( context_data_position == bitsPerChar - 1 ) {
                 context_data_position = 0;
-                context_data.push(getCharFromInt(context_data_val));
+                context_data.push( getCharFromInt( context_data_val ) );
                 context_data_val = 0;
               } else {
                 context_data_position++;
@@ -2523,131 +2796,47 @@ var cls = ( function () {
 
           }
           context_enlargeIn--;
-          if (context_enlargeIn == 0) {
-            context_enlargeIn = Math.pow(2, context_numBits);
+          if ( context_enlargeIn == 0 ) {
+            context_enlargeIn = Math.pow( 2, context_numBits );
             context_numBits++;
           }
-          // Add wc to the dictionary.
-          context_dictionary[context_wc] = context_dictSize++;
-          context_w = String(context_c);
         }
-      }
 
-      // Output the code for w.
-      if (context_w !== "") {
-        if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate,context_w)) {
-          if (context_w.charCodeAt(0)<256) {
-            for (i=0 ; i<context_numBits ; i++) {
-              context_data_val = (context_data_val << 1);
-              if (context_data_position == bitsPerChar-1) {
-                context_data_position = 0;
-                context_data.push(getCharFromInt(context_data_val));
-                context_data_val = 0;
-              } else {
-                context_data_position++;
-              }
-            }
-            value = context_w.charCodeAt(0);
-            for (i=0 ; i<8 ; i++) {
-              context_data_val = (context_data_val << 1) | (value&1);
-              if (context_data_position == bitsPerChar-1) {
-                context_data_position = 0;
-                context_data.push(getCharFromInt(context_data_val));
-                context_data_val = 0;
-              } else {
-                context_data_position++;
-              }
-              value = value >> 1;
-            }
+        // Mark the end of the stream
+        value = 2;
+        for ( i = 0; i < context_numBits; i++ ) {
+          context_data_val = ( context_data_val << 1 ) | ( value & 1 );
+          if ( context_data_position == bitsPerChar - 1 ) {
+            context_data_position = 0;
+            context_data.push( getCharFromInt( context_data_val ) );
+            context_data_val = 0;
           } else {
-            value = 1;
-            for (i=0 ; i<context_numBits ; i++) {
-              context_data_val = (context_data_val << 1) | value;
-              if (context_data_position == bitsPerChar-1) {
-                context_data_position = 0;
-                context_data.push(getCharFromInt(context_data_val));
-                context_data_val = 0;
-              } else {
-                context_data_position++;
-              }
-              value = 0;
-            }
-            value = context_w.charCodeAt(0);
-            for (i=0 ; i<16 ; i++) {
-              context_data_val = (context_data_val << 1) | (value&1);
-              if (context_data_position == bitsPerChar-1) {
-                context_data_position = 0;
-                context_data.push(getCharFromInt(context_data_val));
-                context_data_val = 0;
-              } else {
-                context_data_position++;
-              }
-              value = value >> 1;
-            }
+            context_data_position++;
           }
-          context_enlargeIn--;
-          if (context_enlargeIn == 0) {
-            context_enlargeIn = Math.pow(2, context_numBits);
-            context_numBits++;
-          }
-          delete context_dictionaryToCreate[context_w];
-        } else {
-          value = context_dictionary[context_w];
-          for (i=0 ; i<context_numBits ; i++) {
-            context_data_val = (context_data_val << 1) | (value&1);
-            if (context_data_position == bitsPerChar-1) {
-              context_data_position = 0;
-              context_data.push(getCharFromInt(context_data_val));
-              context_data_val = 0;
-            } else {
-              context_data_position++;
-            }
-            value = value >> 1;
-          }
-
-
+          value = value >> 1;
         }
-        context_enlargeIn--;
-        if (context_enlargeIn == 0) {
-          context_enlargeIn = Math.pow(2, context_numBits);
-          context_numBits++;
+
+        // Flush the last char
+        while ( true ) {
+          context_data_val = ( context_data_val << 1 );
+          if ( context_data_position == bitsPerChar - 1 ) {
+            context_data.push( getCharFromInt( context_data_val ) );
+            break;
+          } else context_data_position++;
         }
-      }
+        return context_data.join( '' );
+      },
 
-      // Mark the end of the stream
-      value = 2;
-      for (i=0 ; i<context_numBits ; i++) {
-        context_data_val = (context_data_val << 1) | (value&1);
-        if (context_data_position == bitsPerChar-1) {
-          context_data_position = 0;
-          context_data.push(getCharFromInt(context_data_val));
-          context_data_val = 0;
-        } else {
-          context_data_position++;
-        }
-        value = value >> 1;
-      }
+      decompress: function ( compressed ) {
+        if ( compressed == null ) return "";
+        if ( compressed == "" ) return null;
+        return LZString._decompress( compressed.length, 32768, function ( index ) {
+          return compressed.charCodeAt( index );
+        } );
+      },
 
-      // Flush the last char
-      while (true) {
-        context_data_val = (context_data_val << 1);
-        if (context_data_position == bitsPerChar-1) {
-          context_data.push(getCharFromInt(context_data_val));
-          break;
-        }
-        else context_data_position++;
-      }
-      return context_data.join('');
-    },
-
-    decompress: function (compressed) {
-      if (compressed == null) return "";
-      if (compressed == "") return null;
-      return LZString._decompress(compressed.length, 32768, function(index) { return compressed.charCodeAt(index); });
-    },
-
-    _decompress: function (length, resetValue, getNextValue) {
-      var dictionary = [],
+      _decompress: function ( length, resetValue, getNextValue ) {
+        var dictionary = [],
           next,
           enlargeIn = 4,
           dictSize = 4,
@@ -2658,159 +2847,162 @@ var cls = ( function () {
           w,
           bits, resb, maxpower, power,
           c,
-          data = {val:getNextValue(0), position:resetValue, index:1};
+          data = {
+            val: getNextValue( 0 ),
+            position: resetValue,
+            index: 1
+          };
 
-      for (i = 0; i < 3; i += 1) {
-        dictionary[i] = i;
-      }
-
-      bits = 0;
-      maxpower = Math.pow(2,2);
-      power=1;
-      while (power!=maxpower) {
-        resb = data.val & data.position;
-        data.position >>= 1;
-        if (data.position == 0) {
-          data.position = resetValue;
-          data.val = getNextValue(data.index++);
-        }
-        bits |= (resb>0 ? 1 : 0) * power;
-        power <<= 1;
-      }
-
-      switch (next = bits) {
-        case 0:
-            bits = 0;
-            maxpower = Math.pow(2,8);
-            power=1;
-            while (power!=maxpower) {
-              resb = data.val & data.position;
-              data.position >>= 1;
-              if (data.position == 0) {
-                data.position = resetValue;
-                data.val = getNextValue(data.index++);
-              }
-              bits |= (resb>0 ? 1 : 0) * power;
-              power <<= 1;
-            }
-          c = f(bits);
-          break;
-        case 1:
-            bits = 0;
-            maxpower = Math.pow(2,16);
-            power=1;
-            while (power!=maxpower) {
-              resb = data.val & data.position;
-              data.position >>= 1;
-              if (data.position == 0) {
-                data.position = resetValue;
-                data.val = getNextValue(data.index++);
-              }
-              bits |= (resb>0 ? 1 : 0) * power;
-              power <<= 1;
-            }
-          c = f(bits);
-          break;
-        case 2:
-          return "";
-      }
-      dictionary[3] = c;
-      w = c;
-      result.push(c);
-      while (true) {
-        if (data.index > length) {
-          return "";
+        for ( i = 0; i < 3; i += 1 ) {
+          dictionary[ i ] = i;
         }
 
         bits = 0;
-        maxpower = Math.pow(2,numBits);
-        power=1;
-        while (power!=maxpower) {
+        maxpower = Math.pow( 2, 2 );
+        power = 1;
+        while ( power != maxpower ) {
           resb = data.val & data.position;
           data.position >>= 1;
-          if (data.position == 0) {
+          if ( data.position == 0 ) {
             data.position = resetValue;
-            data.val = getNextValue(data.index++);
+            data.val = getNextValue( data.index++ );
           }
-          bits |= (resb>0 ? 1 : 0) * power;
+          bits |= ( resb > 0 ? 1 : 0 ) * power;
           power <<= 1;
         }
 
-        switch (c = bits) {
+        switch ( next = bits ) {
+        case 0:
+          bits = 0;
+          maxpower = Math.pow( 2, 8 );
+          power = 1;
+          while ( power != maxpower ) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if ( data.position == 0 ) {
+              data.position = resetValue;
+              data.val = getNextValue( data.index++ );
+            }
+            bits |= ( resb > 0 ? 1 : 0 ) * power;
+            power <<= 1;
+          }
+          c = f( bits );
+          break;
+        case 1:
+          bits = 0;
+          maxpower = Math.pow( 2, 16 );
+          power = 1;
+          while ( power != maxpower ) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if ( data.position == 0 ) {
+              data.position = resetValue;
+              data.val = getNextValue( data.index++ );
+            }
+            bits |= ( resb > 0 ? 1 : 0 ) * power;
+            power <<= 1;
+          }
+          c = f( bits );
+          break;
+        case 2:
+          return "";
+        }
+        dictionary[ 3 ] = c;
+        w = c;
+        result.push( c );
+        while ( true ) {
+          if ( data.index > length ) {
+            return "";
+          }
+
+          bits = 0;
+          maxpower = Math.pow( 2, numBits );
+          power = 1;
+          while ( power != maxpower ) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if ( data.position == 0 ) {
+              data.position = resetValue;
+              data.val = getNextValue( data.index++ );
+            }
+            bits |= ( resb > 0 ? 1 : 0 ) * power;
+            power <<= 1;
+          }
+
+          switch ( c = bits ) {
           case 0:
             bits = 0;
-            maxpower = Math.pow(2,8);
-            power=1;
-            while (power!=maxpower) {
+            maxpower = Math.pow( 2, 8 );
+            power = 1;
+            while ( power != maxpower ) {
               resb = data.val & data.position;
               data.position >>= 1;
-              if (data.position == 0) {
+              if ( data.position == 0 ) {
                 data.position = resetValue;
-                data.val = getNextValue(data.index++);
+                data.val = getNextValue( data.index++ );
               }
-              bits |= (resb>0 ? 1 : 0) * power;
+              bits |= ( resb > 0 ? 1 : 0 ) * power;
               power <<= 1;
             }
 
-            dictionary[dictSize++] = f(bits);
-            c = dictSize-1;
+            dictionary[ dictSize++ ] = f( bits );
+            c = dictSize - 1;
             enlargeIn--;
             break;
           case 1:
             bits = 0;
-            maxpower = Math.pow(2,16);
-            power=1;
-            while (power!=maxpower) {
+            maxpower = Math.pow( 2, 16 );
+            power = 1;
+            while ( power != maxpower ) {
               resb = data.val & data.position;
               data.position >>= 1;
-              if (data.position == 0) {
+              if ( data.position == 0 ) {
                 data.position = resetValue;
-                data.val = getNextValue(data.index++);
+                data.val = getNextValue( data.index++ );
               }
-              bits |= (resb>0 ? 1 : 0) * power;
+              bits |= ( resb > 0 ? 1 : 0 ) * power;
               power <<= 1;
             }
-            dictionary[dictSize++] = f(bits);
-            c = dictSize-1;
+            dictionary[ dictSize++ ] = f( bits );
+            c = dictSize - 1;
             enlargeIn--;
             break;
           case 2:
-            return result.join('');
-        }
-
-        if (enlargeIn == 0) {
-          enlargeIn = Math.pow(2, numBits);
-          numBits++;
-        }
-
-        if (dictionary[c]) {
-          entry = dictionary[c];
-        } else {
-          if (c === dictSize) {
-            entry = w + w.charAt(0);
-          } else {
-            return null;
+            return result.join( '' );
           }
+
+          if ( enlargeIn == 0 ) {
+            enlargeIn = Math.pow( 2, numBits );
+            numBits++;
+          }
+
+          if ( dictionary[ c ] ) {
+            entry = dictionary[ c ];
+          } else {
+            if ( c === dictSize ) {
+              entry = w + w.charAt( 0 );
+            } else {
+              return null;
+            }
+          }
+          result.push( entry );
+
+          // Add w+entry[0] to the dictionary.
+          dictionary[ dictSize++ ] = w + entry.charAt( 0 );
+          enlargeIn--;
+
+          w = entry;
+
+          if ( enlargeIn == 0 ) {
+            enlargeIn = Math.pow( 2, numBits );
+            numBits++;
+          }
+
         }
-        result.push(entry);
-
-        // Add w+entry[0] to the dictionary.
-        dictionary[dictSize++] = w + entry.charAt(0);
-        enlargeIn--;
-
-        w = entry;
-
-        if (enlargeIn == 0) {
-          enlargeIn = Math.pow(2, numBits);
-          numBits++;
-        }
-
       }
-    }
-  };
+    };
     return LZString;
-  })();
-
+  } )();
 
 
 
