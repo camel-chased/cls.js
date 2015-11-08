@@ -1671,7 +1671,7 @@ var cls = ( function () {
   function canBeClass( instance, shouldBe, className, propertyName ) {
 
     var valueType = instance.getClassName();
-    console.log( "canBeClass", propertyName, shouldBe, 'is', valueType );
+    //console.log( "canBeClass", propertyName, shouldBe, 'is', valueType );
 
     if ( shouldBe.indexOf( 'anytype' ) >= 0 ) {
       return true;
@@ -1765,13 +1765,13 @@ var cls = ( function () {
       //console.log("SET: it is my property");
       obj.classProperties[ propertyName ].value = value;
     } else if ( facade.inherits.indexOf( propertyClassId ) !== -1 ) {
-      console.log( "i inherit from property" );
+      //console.log( "i inherit from property" );
       obj.classProperties[ propertyName ].value = value;
     } else {
-      console.log( "propertyClassId", propertyClassId, "classID", classId );
-      console.log( "facade inherits", facade.inherits );
-      console.log( "class name", facade.getCurrentClassName() );
-      console.log( "property className", propertyFacade.getCurrentClassName() );
+      //console.log( "propertyClassId", propertyClassId, "classID", classId );
+      //console.log( "facade inherits", facade.inherits );
+      //console.log( "class name", facade.getCurrentClassName() );
+      //console.log( "property className", propertyFacade.getCurrentClassName() );
       throw new Error( "Cannot change property '" + propertyName +
         "' only child classes can redefine properties." );
     }
@@ -2033,7 +2033,7 @@ var cls = ( function () {
 
     if ( weAreDecompressing ) {
       if ( definedNames.indexOf( className ) !== -1 ) {
-        console.warn( "Class decompression: Class [ " + className + " ] is already defined." );
+        //console.warn( "Class decompression: Class [ " + className + " ] is already defined." );
         return __definedClasses[ className ];
       }
     } else {
