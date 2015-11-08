@@ -1,9 +1,8 @@
 /**
- * FullClass - creating full featured class system in javascript
+ * cls.js - creating full featured dynamic class system in javascript
  *
- * Author: Rafal Pospiech <https://github.com/camel-chased>
+ * Author: camel-chased <https://github.com/camel-chased>
  * License: MIT
- *
  */
 
 var cls = ( function () {
