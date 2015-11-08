@@ -8,7 +8,7 @@ PROS
 * Runtime type checking (with classes as types too).
 * Default method arguments.
 * Automatic constructor execution.
-* Builtin class and object compression (json alternative, you can send class through http compressed).
+* Builtin class and object compression (json alternative, you can send class or object with functions through http - compressed).
 * New methods/properties can be added dynamically.
 * ES5 compatible, browser and nodejs support.
 
@@ -90,6 +90,25 @@ var st = MyClass.statMet(); // "this is static method"
 // you don't need to write "new" keyword
 var myInstance = MyClass("Robocop");
 
+
+// mixin...
+var dynamo = {
+  someOtherMethod:{
+    declarations:['public','final'],
+    value:function(){
+      return "this method is added in runtime";
+    }
+  },
+  dynapro:{
+    value:"This is dynamic property added somewhere in code execution"
+  }
+}
+
+myInstance.mixWithObject(dynamo);
+myInstance.someOtherMethod(); //"this method is added in runtime"
+
+
+// extending ...
 var Second = cls.class("Second",function(){
   return {
 
@@ -116,6 +135,46 @@ var ExtInstance = Ext();
 
 var test = ExtInstance.publ(); // "this is public property"
 var test2 = ExtInstance.secondFeature(); // "some additional function"
+
+
+// factory...
+
+var Honda = cls.class("Honda",function(){
+  return {
+    drive:function(){
+      console.log("brrrrrruuuuummmmm");
+    }
+  }
+});
+
+var Car = cls.class("Car",function(){
+  return {
+
+    Car:function(model){
+      if( typeof model !== 'undefined'){
+
+        return this.factory(model);
+      }
+    },
+
+    /**
+     * [function description]
+     * @method  factory static
+     * @param   {string} model
+     * @returns {anytype}
+     */
+    factory:function(model){
+      switch (model){
+        case "Honda":return Honda();
+      }
+    }
+  };
+});
+
+var myCar;
+myCar = Car("Honda");
+// or
+myCar = Car.factory("Honda");
 ```
 
 
