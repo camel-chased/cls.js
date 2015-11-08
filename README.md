@@ -107,10 +107,15 @@ var Second = cls.class("Second",function(){
 // you can extend classes dynamically like mixin but order is important
 // left class doesn't have access to right class properties/methods
 var Ext = cls.extend(MyClass,Second);
+
+//static from MyClass is inherited
+Ext.statMet();
+
+// crating instance
 var ExtInstance = Ext();
 
-var test = Ext.publ(); // "this is public property"
-var test2 = Ext.secondFeature(); // "some additional function"
+var test = ExtInstance.publ(); // "this is public property"
+var test2 = ExtInstance.secondFeature(); // "some additional function"
 ```
 
 
