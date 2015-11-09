@@ -148,14 +148,14 @@ var Ext = MyClass.extend(Second);
 // or with array - array can be dynamically generated
 var Ext = cls.extend([MyClass,Second]);
 
-// or something like this - but this way is the worst way because you loose flexibility
-// an workaround for this(flexibility problem) is cls.getSingleClass("Ext") to retrieve
-// only "EXt" class itself without inheriting anything
+// or something like this
 var Ext = MyClass.extend(cls.class("Ext",function(){
   return {
     // code for Extension here
   };
 }));
+// when you want to use only Ext class without inherited methods use cls.getSingleClass("Ext");
+
 // it is always better to store functionality in variables so you can reuse them
 var Ext = cls.class("Ext",function(){
   return {

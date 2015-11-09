@@ -2616,7 +2616,7 @@ var cls = ( function () {
   }
 
 
-  cls.getSingeClass = function(className){
+  cls.getSingleClass = function(className){
     if( !_isDef( __definedClasses[ className ])){
       throw new Error("Cannot find [ "+className+" ] class.");
     }
