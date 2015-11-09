@@ -1160,12 +1160,14 @@ var cls = ( function () {
    * @returns {[type]} [description]
    */
   function classPropertiesFromObject( className, sourceObject, classId, classProperties ) {
-    throw new Error( "creating classes from objects is not yet implemented" );
-    var classObj = getObject( classId );
-    var facade = classObj.classFacade;
-
-    forEach( sourceObject.obj, function ( val, name ) {
-      _addToClassProperties( classProperties, name, val, classId );
+    forEach( sourceObject.source, function ( property, name ) {
+      property.classId = classId;
+      var staticProp = false;
+      if( _isDef( property.declarations )){
+        staticProp = property.declarations.indexOf('static') >= 0;
+      }
+      checkClassProperty( property, className, name, staticProp );
+      classProperties[ name ]=property;
     } );
     return classProperties;
   };
@@ -2020,6 +2022,18 @@ var cls = ( function () {
     } )
   }
 
+  function getStaticFromObject(obj,className){
+    var result = {};
+    forEach(obj,function(property,name){
+      if( _isDef(property.declarations) ){
+        if( property.declarations.indexOf("static") !== -1 ){
+          result[ name ] = checkClassProperty( property, className, name, true );
+        }
+      }
+    });
+    return result;
+  }
+
   cls.class = function ( className, source ) {
     return _class( className, source, false );
   }
@@ -2068,14 +2082,29 @@ var cls = ( function () {
 
     sourceType = _type( source );
 
-    str = source.toString();
-    obj = source();
-    sourceObject = {
-      'className': className,
-      'source': source,
-      'str': str,
-      'obj': obj
-    };
+    if( sourceType === "function"){
+      str = source.toString();
+      obj = source();
+      sourceObject = {
+        'className': className,
+        'source': source,
+        'str': str,
+        'obj': obj
+      };
+    }else{
+      str = "object";
+      obj = {};
+      forEach(source,function(property,name){
+        obj[ name ] = property.value;
+      });
+      sourceObject = {
+        'className': className,
+        'source': _clone(source),
+        'str': str,
+        'obj': obj
+      };
+      source = sourceObject;
+    }
 
     if ( sourceType !== 'function' && sourceType !== 'object' ) {
       throw new Error( "Source for class creation must be inline function or specially prepared object." );
@@ -2088,6 +2117,11 @@ var cls = ( function () {
       if ( _type( result ) === 'undefined' ) {
         return instance;
       } else {
+        if( _type( result ) === 'clsClassFacade'){
+          var classId = result.getClassId();
+          var obj = getObject(classId);
+          return obj.classInstance;
+        }
         return result;
       }
     }
@@ -2103,7 +2137,12 @@ var cls = ( function () {
     rget( constructor, 'compress', compress.bind( constructor ) );
     //rget( constructor, 'decompress', decompress.bind( constructor ) );
 
-    var staticProps = parseComments( sourceObject, className, STATIC_METHOD_PROPERTY );
+    if( sourceType === 'function' ){
+      var staticProps = parseComments( sourceObject, className, STATIC_METHOD_PROPERTY );
+    }else{
+      var staticProps = getStaticFromObject(source,className);
+    }
+
     rget( constructor, '___static', staticProps );
     resolveStatic( staticProps, constructor );
 
@@ -2169,25 +2208,27 @@ var cls = ( function () {
     }
 
     if ( _isDef( source.___source ) ) {
-      //console.log('getting source from',source);
       source = source.___source;
     }
 
     if ( _type( source ) === 'function' ) {
       obj = source();
+      str = source.toString();
+      sourceObject = {
+        'className': className,
+        'source': source,
+        'str': str,
+        'obj': obj
+      };
+    }else{
+      obj = source.obj;
+      sourceObject = source;
     }
 
     if ( !_isDef( classProperties ) ) {
       classProperties = new clsClassProperties();
     }
 
-    str = source.toString();
-    sourceObject = {
-      'className': className,
-      'source': source,
-      'str': str,
-      'obj': obj
-    };
 
     generateClassProperties( className, sourceObject, classId, classProperties );
     //console.log('generated classProperties',classProperties);
@@ -2438,43 +2479,6 @@ var cls = ( function () {
   }
 
 
-  cls._getAllFacades = function () {
-    var facades = {};
-    forEach( __allClasses, function ( val, classId ) {
-      facades[ val.classFacade.getCurrentClassName() + '_' + classId ] = val.classFacade;
-    } );
-    return facades;
-  }
-
-  cls.logParents = function ( instance ) {
-    var classId = instance.getClassId();
-    var className = instance.getCurrentName();
-    var classFacade = __allClasses[ classId ].classFacade;
-    var parent = classFacade.parent;
-    var parentName = classFacade.parentName;
-    //console.log(className + '_' + classId, 'have parent', parentName + '_' + parent);
-    //console.log(' ->', className, 'inherits', classFacade.inherits);
-    if ( parent !== '' ) {
-      cls.logParents( __allClasses[ parent ].classInstance );
-    }
-  }
-
-  cls.childOf = function ( instance ) {
-    var classId = instance.getClassId();
-    var classFacade = __allClasses[ classId ].classFacade;
-    //console.log(classFacade.getCurrentClassName(), 'inherits', classFacade.inherits);
-  }
-
-  cls.logProperties = function () {
-    forEach( __allClasses, function ( obj, classId ) {
-      var props = obj.classProperties;
-      var facade = obj.classFacade;
-      //console.log('#class', facade.getCurrentClassName(), facade.getClassId(), 'have properties:');
-      forEach( props, function ( val, name ) {
-        //console.log('  ', name, 'with id', val.classId);
-      } );
-    } );
-  }
 
 
 

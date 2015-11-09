@@ -109,6 +109,36 @@ var st = MyClass.statMet(); // "this is static method"
 // you don't need to write "new" keyword
 var myInstance = MyClass("Robocop");
 ```
+### Object instead of comment blocks (can be minified)
+
+```javascript
+// this is full declaration of method and property
+var classSource = {
+
+  "someMethod": {                       // name of the method
+    types: [ 'function' ],              // it can be function only (type checking)
+    declarations: [ "protected" ],      // declaration of the visibility
+    returns: [ "string" ],              // what type it returns
+    arguments: [ {                      // what kind of arguments are welcome
+      'name': 'name',                   // name of the argument
+      'default': 'John',                // default values
+      'types': [ 'string' ]             // which types are ok
+    } ],
+    value: function ( name ) {          // body of the method
+      return "this is protected " + name;
+    }
+  },
+
+
+  "someProperty":{
+    types:['string'],
+    declarations:['public'],
+    value:"This is some property"
+  }
+
+}
+var SomeClass = cls.class("SomeClass",classSource);
+```
 
 ### Extending
 
