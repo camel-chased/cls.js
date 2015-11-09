@@ -15,11 +15,12 @@ PROS
 
 CONS
 
-* Can't be minified (sort of) - compression added instead or you can minify without comment block minification
+* Can't be minified (yet) - compression added instead or you can minify without comment block minification for now
 
 
 TODO
 
+* Support for minification
 * Automatic testing - no need to manually write basic tests
 * Automatic visualization - UML generation
 * Automatic documentation
