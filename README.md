@@ -148,6 +148,8 @@ var Ext = MyClass.extend(Second);
 var Ext = cls.extend([MyClass,Second]);
 
 // or something like this - but this way is the worst way because you loose flexibility
+// an workaround for this(flexibility problem) is cls.getSingleClass("Ext") to retrieve
+// only "EXt" class itself without inheriting anything
 var Ext = MyClass.extend(cls.class("Ext",function(){
   return {
     // code for Extension here
