@@ -2034,6 +2034,26 @@ var cls = ( function () {
     return result;
   }
 
+
+  function saveAsObject(fileName){
+    var result = {};
+    if( _isDef( module )){
+      if( _isDef( module.exports ) ){
+        if( this.___type === 'class'){
+          if( _type( this.___source ) === 'function' ){
+            parseComments(this.___source, this.___className, undefined, 'asObjectId', result);
+          }else{
+            result = this.___source;
+          }
+          // we have an object with all declarations needed to create a class
+
+        }else{// this is extend
+          
+        }
+      }
+    }
+  }
+
   cls.class = function ( className, source ) {
     return _class( className, source, false );
   }
@@ -2135,6 +2155,8 @@ var cls = ( function () {
     rget( constructor, 'extend', constructorExtend.bind( constructor ) );
     rwget( constructor, 'compressed', '' );
     rget( constructor, 'compress', compress.bind( constructor ) );
+    rget( constructor, 'saveAsObject',saveAsObject.bind( constructor ) );
+
     //rget( constructor, 'decompress', decompress.bind( constructor ) );
 
     if( sourceType === 'function' ){

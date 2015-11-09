@@ -113,6 +113,7 @@ var myInstance = MyClass("Robocop");
 
 ```javascript
 // this is full declaration of method and property
+// not all properties are needed, it can be only value
 var classSource = {
 
   "someMethod": {                       // name of the method
@@ -126,6 +127,12 @@ var classSource = {
     } ],
     value: function ( name ) {          // body of the method
       return "this is protected " + name;
+    }
+  },
+
+  "someOtherMethod":{
+    value:function(){
+      return "this method have only value";
     }
   },
 
