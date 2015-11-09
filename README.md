@@ -11,16 +11,18 @@ PROS
 * Builtin class and object compression (json alternative, you can send class or object with functions through http - compressed).
 * New methods/properties can be added dynamically.
 * ES5 compatible, browser and nodejs support.
-* No need to compile anything.
+* Builtin bundle creation for browser.
 
 CONS
 
-* Can't be minified (yet) - compression added instead or you can minify without comment block minification for now
+* Can't be minified, but you don't need minification at all. There is command line bundle creator.
+Bundle creator search for all classes with given filter, merge them into one file "bundle.cls.js" and
+you can use it in the browser (kind of browserify).
+If you really need, you can also save the class as object and then minify it with "saveAsObject" method SomeClass.saveAsObject("SomeClass.cls.js");
 
 
 TODO
 
-* Support for minification
 * Automatic testing - no need to manually write basic tests
 * Automatic visualization - UML generation
 * Automatic documentation

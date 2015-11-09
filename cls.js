@@ -28,7 +28,7 @@ var cls = ( function () {
    * @returns {String} typeof
    */
   function _type( obj ) {
-    var standardConstructors = [ "Object", "Function" ];
+    var standardConstructors = [ "Object", "Function", "String", "Number" ];
     if ( typeof obj === 'undefined' ) {
       return 'undefined';
     }
@@ -877,7 +877,7 @@ var cls = ( function () {
 
   function parseComments( sourceObject, className, regex, classId, classProperties ) {
 
-    if ( regex === null ) {
+    if ( regex === null || typeof regex === 'undefined') {
       regex = METHOD_PROPERTY;
     }
     var str = sourceObject.str;
@@ -2034,22 +2034,131 @@ var cls = ( function () {
     return result;
   }
 
+  function tabs(indent){
+    var result="";
+    for(var i =0; i<indent;i++){result+="  ";}
+    return result;
+  }
+
+  function arrayToString(arr,indent){
+    var result = "";
+    if( arr.length === 0)return "";
+    result+=arr[0].trim();
+    if(arr.length > 1){result+="\n";}
+    if( arr.length>=3){
+      for( var i = 1; i< arr.length-1;i++){
+        result += tabs(indent+1)+arr[i].trim()+"\n";
+      }
+      result+=tabs(indent)+arr[ arr.length-1 ].trim();
+    }else if(arr.length === 2){
+      result+=tabs(indent)+arr[ 1 ].trim();
+    }
+    return result;
+  }
+
+  function stringify(prop,indent){
+    var result="";
+    var propType = _type( prop );
+    if( propType === 'function'){
+      var arr = prop.toString().split("\n");
+      result+=arrayToString(arr,indent)
+    }else if( propType === 'object'){
+      result += objectToString(prop,indent+1);
+    }else if( propType === 'array' ){
+      if( prop.length > 0){
+        if( prop.length>1 ){
+          result += "\n"+tabs(indent)+"[\n";
+        }else{ result+="[ "; }
+        forEach(prop,function(val,index){
+          if( prop.length>1 ){result+=tabs(indent+1);}
+          result+=stringify(val,indent+2);
+        });
+        if(prop.length>1){
+          result+="\n"+tabs(indent)+"]";
+        }else{result+=" ]";}
+      }else{
+        result+="[]";
+      }
+    }else if(propType === 'string'){
+      arr=prop.
+      replace(/\"{1}/gim,"\\\"").
+      replace(/^/gim,'"').
+      replace(/\n{1}/gim,"\\n\"+\n").
+      substr(1).
+      split("\n");
+      result+='"'+arrayToString(arr,indent-1)+'"';
+    }else{
+      result += prop.toString();
+    }
+    return result;
+  }
+
+  function objectToString(obj,indent){
+    var result = "{\n";
+    //indent++;
+    if( _type(obj) !== 'object'){
+      throw new Error("This is not an object.");
+    }
+    forEach(obj,function(prop,name){
+      result+=tabs(indent+1)+'"'+name+'":'+stringify(prop,indent+1);
+      if( _type(prop) !== 'object'){
+        result+=',';
+      }
+      result+="\n";
+    });
+    result+=tabs(indent-1)+"}";
+    if( indent !== 0){ result+=",";}
+    return result;
+  }
+
+  function asString(){
+    var obj = this.asObject();
+    var result = objectToString(obj,0);
+    return result;
+  }
 
   function saveAsObject(fileName){
+    var className = this.___className;
+    var str = "// Auto generated class\n\n";
+    str+= "var "+className+"Source = "+this.asString()+";\nvar "+className+" = cls.class("+className+","+className+"Source);\n";
+    if( _isDef(module) ){
+      if( _isDef( module.exports ) ){
+
+        var fs = require("fs");
+        fs.writeFileSync(fileName, str);
+
+      }else{return false;}
+    }else{return false;}
+  }
+
+  /**
+   * convert class to object representation
+   * @method  toObject
+   * @returns {[type]} [description]
+   */
+  function asObject(){
     var result = {};
     if( _isDef( module )){
       if( _isDef( module.exports ) ){
+        result.className = this.___className;
         if( this.___type === 'class'){
+          result.type = 'class';
           if( _type( this.___source ) === 'function' ){
-            parseComments(this.___source, this.___className, undefined, 'asObjectId', result);
+            result.source = {};
+            parseComments(this.___sourceObject, this.___className, undefined, 'asObjectId', result.source);
+            forEach(result.source,function(property,name){
+              delete property.classId;
+            });
           }else{
-            result = this.___source;
+            result.source = this.___source;
           }
           // we have an object with all declarations needed to create a class
-
         }else{// this is extend
-          
+          result.type = 'extend';
+          result.firstClass = toObject.call(this.firstClass);
+          result.secondClass = toObject.call(this.secondClass);
         }
+        return result;
       }
     }
   }
@@ -2155,8 +2264,9 @@ var cls = ( function () {
     rget( constructor, 'extend', constructorExtend.bind( constructor ) );
     rwget( constructor, 'compressed', '' );
     rget( constructor, 'compress', compress.bind( constructor ) );
-    rget( constructor, 'saveAsObject',saveAsObject.bind( constructor ) );
-
+    rget( constructor, 'asObject', asObject.bind( constructor ) );
+    rget( constructor, 'asString', asString.bind( constructor ) );
+    rget( constructor, 'saveAsObject', saveAsObject.bind( constructor ) );
     //rget( constructor, 'decompress', decompress.bind( constructor ) );
 
     if( sourceType === 'function' ){
@@ -2484,11 +2594,16 @@ var cls = ( function () {
     rget( constructor, 'extend', constructorExtend.bind( constructor ) );
     rwget( constructor, 'compressed', '' );
     rget( constructor, 'compress', compress.bind( constructor ) );
+    rget( constructor, 'asObject', asObject.bind( constructor ) );
+    rget( constructor, 'asString', asString.bind( constructor ) );
+    rget( constructor, 'saveAsObject', saveAsObject.bind( constructor ) );
     //rget( constructor, 'decompress', decompress.bind( constructor ) );
 
     var staticProps = _merge( firstClass.___static, secondClass.___static );
     rget( constructor, '___static', staticProps );
     resolveStatic( staticProps, constructor );
+
+    __definedAllClasses[ secondClass.___className ] = constructor;
 
     return constructor;
   }
@@ -2501,7 +2616,85 @@ var cls = ( function () {
   }
 
 
+  cls.getSingeClass = function(className){
+    if( !_isDef( __definedClasses[ className ])){
+      throw new Error("Cannot find [ "+className+" ] class.");
+    }
+    return __definedClasses[ className ];
+  }
 
+  cls.getClass = function(className){
+    if( _isDef(__definedAllClasses[className] ) ){
+      return __definedAllClasses[ className ];
+    }else if(_isDef(__definedClasses[className]) ){
+      return __definedClasses[ className ];
+    }else{
+      throw new Error("Cannot find [ "+className+" ] class.");
+    }
+  }
+
+  function isNode(){
+    var result = _isDef(process) && _isDef(module);
+    if(result){
+      result = result && _isDef(process.version) && _isDef(module.exports);
+      return result;
+    }else{
+      return false;
+    }
+  }
+
+  __classPath = {};
+  __definedAllClasses = {};
+
+  cls.require = function clsRequire(path){
+
+    if( isNode() ){
+      return require(path);
+    }else{//browser
+      var className = classNameFromPath(path);
+      return cls.getClass(className);
+    }
+
+  }
+
+  function buildFile(file){
+
+  }
+
+  function buildForBrowser(){
+
+    var argv = process.argv;
+    var output = 'build.cls.js';
+    var input = ["public/js/*.cls.js","public/js/**/*.cls.js"];
+
+    if( argv.indexOf('-o') >= 0 ){
+      output = argv[ argv.indexOf('-o')+1 ];
+    }
+    if( argv.indexOf('-f') >= 0 ){
+      var inputStr = argv[ argv.indexOf('-f')+1 ];
+      input = inputStr.split(',');
+    }
+
+    var readdir = require("readdir");
+    var files = readdir.readSync('./',input);
+    forEach(files,function(file){
+      buildFile(file);
+    });
+  }
+
+  function parseCommand(){
+    var command = process.argv[2];
+    switch (command) {
+      case "build":buildForBrowser();break;
+      default:
+    }
+  }
+
+  if( isNode() ){
+    if( process.argv.length > 2 ){
+      parseCommand();
+    }
+  }
 
 
   // third parties
