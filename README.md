@@ -15,10 +15,11 @@ PROS
 
 CONS
 
-* Can't be minified, but you don't need minification at all. There is command line bundle creator.
+* Hard to minify, but you don't need minification at all. There is command line bundle creator.
 Bundle creator search for all classes with given filter, merge them into one file "bundle.cls.js" and
 you can use it in the browser (like in browserify).
 If you really need, you can also save the class as object and then minify it with "saveAsObject" method SomeClass.saveAsObject("SomeClass.cls.js");
+Or create classes from objects with declarations instead of comment block declarations.
 
 
 TODO
