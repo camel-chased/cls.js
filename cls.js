@@ -62,7 +62,7 @@ var cls = ( function () {
     }
 
   };
-  cls.type = _type;
+  cls["type"] = _type;
   /**
    * clone - just clone the object recurively
    *
@@ -205,7 +205,7 @@ var cls = ( function () {
       s4() + '-' + s4() + s4() + s4();
   };
 
-  cls.guid = _guid;
+  cls["guid"] = _guid;
 
   /**
    * converts default parameters to its type like string, number, object
@@ -619,7 +619,7 @@ var cls = ( function () {
    * @param {string} path for informational purpose
    * @returns {object}
    */
-  cls.var = function ( obj, path ) {
+  cls["var"] = function ( obj, path ) {
 
     var newObj = {},
       key = '',
@@ -1875,7 +1875,7 @@ var cls = ( function () {
     return result.substr( result.length-1 -16);
   }
 
-  cls.compress = function clsCompress( anything ) {
+  cls["compress"] = function clsCompress( anything ) {
     if( _isDef(anything.isConstructor ) ){
       return anything.compress();
     }
@@ -1914,7 +1914,7 @@ var cls = ( function () {
   }
 
 
-  cls.decompress = function clsDecompress( str ) {
+  cls["decompress"] = function clsDecompress( str ) {
     str =  LZString.decompressFromUint8Array( str );
     if (str === null){
       throw new Error("Cannot decompress file.");
@@ -2176,7 +2176,7 @@ var cls = ( function () {
     }
   }
 
-  cls.class = function ( className, source ) {
+  cls["class"] = function ( className, source ) {
     return _class( className, source, false );
   }
 
@@ -2267,6 +2267,7 @@ var cls = ( function () {
         return result;
       }
     }
+    
 
     rget( constructor, '___type', 'class' );
     rget( constructor, '___source', source );
@@ -2424,7 +2425,7 @@ var cls = ( function () {
   };
 
 
-  cls.create = function create( className, source ) {
+  cls["create"] = function create( className, source ) {
     return _create( className, source );
   }
 
@@ -2575,7 +2576,7 @@ var cls = ( function () {
 
   var __definedAllClasses = {};
 
-  cls.extend = function extend( firstClass, secondClass ) {
+  cls["extend"] = function extend( firstClass, secondClass ) {
 
     if ( _type( firstClass ) === 'array' ) {
       return arrayExtend( firstClass );
@@ -2623,21 +2624,21 @@ var cls = ( function () {
   }
 
 
-  cls.empty = function empty( className ) {
+  cls["empty"] = function empty( className ) {
     return cls.class( className, function () {
       return {}
     } );
   }
 
 
-  cls.getSingleClass = function(className){
+  cls["getSingleClass"] = function(className){
     if( !_isDef( __definedClasses[ className ])){
       throw new Error("Cannot find [ "+className+" ] class.");
     }
     return __definedClasses[ className ];
   }
 
-  cls.getClass = function(className){
+  cls["getClass"] = function(className){
     if( _isDef(__definedAllClasses[className] ) ){
       return __definedAllClasses[ className ];
     }else if(_isDef(__definedClasses[className]) ){
@@ -2661,7 +2662,7 @@ var cls = ( function () {
   var __debundledFiles = {};
   var __modules = {};
 
-  cls.loadBundle = function loadBundle(){
+  cls["loadBundle"] = function loadBundle(){
     ajax.get("build.cls").done(function(data){
       var u8str = LZString.decompressFromUint8Array(data);
       var obj = JSON.parse(u8str);
@@ -2669,7 +2670,7 @@ var cls = ( function () {
     });
   }
 
-  cls.deBundle = function deBundle(obj){
+  cls["deBundle"] = function deBundle(obj){
     forEach(obj,function(content,fileName){
       var exprt = content.replace("module.exports","cls.module.exports");
       cls['module'] = { 'exports': undefined };
@@ -2691,7 +2692,7 @@ var cls = ( function () {
     console.log("debundled",__definedAllClasses);
   }
 
-  cls.require = function clsRequire(path){
+  cls["require"] = function clsRequire(path){
 
     if( isNode() ){
       return require(path);
