@@ -2670,24 +2670,23 @@ var cls = ( function () {
   }
 
   cls.deBundle = function deBundle(obj){
-    //files are stored as strings so we must evaluate
-    var module={ exports: undefined };
     forEach(obj,function(content,fileName){
-      eval(content);
-      __modules[ fileName ] = module.exports;
-      if( _isDef(module.exports)){
-        if(_isDef(module.exports.isConstructor)){
-          var className = module.exports.___className;
-          __definedAllClasses[ className ] = module.exports;
+      var exprt = content.replace("module.exports","cls.module.exports");
+      cls['module'] = { 'exports': undefined };
+      eval(exprt);
+      __modules[ fileName ] = cls.module.exports;
+      if( _isDef(cls.module.exports)){
+        if(_isDef(cls.module.exports.isConstructor)){
+          var className = cls.module.exports.___className;
+          __definedAllClasses[ className ] = cls.module.exports;
           if( typeof window !== 'undefined' ){
-            window[className] = module.exports;
+            window[className] = cls.module.exports;
           }
           if( typeof GLOBAL !== 'undefined' ){
-            GLOBAL[className] = module.exports;
+            GLOBAL[className] = cls.module.exports;
           }
         }
       }
-      module.exports = null;
     });
     console.log("debundled",__definedAllClasses);
   }
