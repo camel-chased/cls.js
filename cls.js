@@ -1572,6 +1572,15 @@ var cls = ( function () {
    * @returns {[type]} [description]
    */
   clsClassData.prototype.get = function get( classId, propertyName ) {
+
+    function preMethod() {
+      var _args = arguments;
+      _args = checkMethodArgTypes( obj, propertyName, _args );
+      var result = property.value.apply( facade, _args );
+      result = checkReturnValue( classId, propertyName, result );
+      return result;
+    }
+
     var className = getName( classId );
     if ( !this.propertyExists( propertyName ) ) {
       throw new Error( "There is no property like " + propertyName + " in " + className );
@@ -1591,13 +1600,7 @@ var cls = ( function () {
           var facade = this.classFacades[ classId ];
           var obj = getObject( classId );
           //return result.value.bind(facade);
-          function preMethod() {
-            var _args = arguments;
-            _args = checkMethodArgTypes( obj, propertyName, _args );
-            var result = property.value.apply( facade, _args );
-            result = checkReturnValue( classId, propertyName, result );
-            return result;
-          }
+
           return preMethod;
         } else {
           return property.value;
