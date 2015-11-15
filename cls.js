@@ -2267,7 +2267,7 @@ var cls = ( function () {
         return result;
       }
     }
-    
+
 
     rget( constructor, '___type', 'class' );
     rget( constructor, '___source', source );
@@ -2293,6 +2293,13 @@ var cls = ( function () {
     resolveStatic( staticProps, constructor );
 
     __definedClasses[ className ] = constructor;
+
+    if( typeof window !=='undefined'){
+      window[className] = constructor;
+    }
+    if( typeof GLOBAL !== 'undefined'){
+      GLOBAL[className] = constructor;
+    }
 
     return constructor;
   }
