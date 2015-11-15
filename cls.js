@@ -1866,14 +1866,19 @@ var cls = ( function () {
     return obj;
   }
 
-  cls.compress = function clsCompress( anything ) {
+  function _unescape(str){
+    var result = str.substr(16);
+    return result.substr( result.length-1 -16);
+  }
 
+  cls.compress = function clsCompress( anything ) {
     if( _isDef(anything.isConstructor ) ){
       return anything.compress();
     }
     var result = fnToStrings( anything );
-    var json = JSON.stringify( result );
-    return LZString.compress( json );
+    var json =  JSON.stringify( result );
+    var compressed = LZString.compressToUint8Array( json );
+    return compressed;
   }
 
 
@@ -1906,7 +1911,10 @@ var cls = ( function () {
 
 
   cls.decompress = function clsDecompress( str ) {
-    str = LZString.decompress( str );
+    str =  LZString.decompressFromUint8Array( str );
+    if (str === null){
+      throw new Error("Cannot decompress file.");
+    }
     var obj = JSON.parse( str );
     var result;
     if( _isDef(obj.__compressedClass) ){
@@ -1965,7 +1973,7 @@ var cls = ( function () {
     }
     if ( !_isDef( waitForNow ) ) {
       result = JSON.stringify( result );
-      result = LZString.compress( result );
+      result = LZString.compressToUint8Array( result );
       this.compressed = result;
     }
     return result;
@@ -1993,7 +2001,7 @@ var cls = ( function () {
     if ( str === '' ) {
       throw new Error( "Class is not compressed." );
     }
-    var json = LZString.decompress( str );
+    var json = LZString.decompressFromUint8Array( str );
     var obj = JSON.parse( json );
     // we must build classes again form source objects ;)
     var result = buildFromStringObjects( obj.__compressedClass );
@@ -2021,6 +2029,7 @@ var cls = ( function () {
       }
     } )
   }
+
 
   function getStaticFromObject(obj,className){
     var result = {};
@@ -2561,6 +2570,8 @@ var cls = ( function () {
     }
   }
 
+  __definedAllClasses = {};
+
   cls.extend = function extend( firstClass, secondClass ) {
 
     if ( _type( firstClass ) === 'array' ) {
@@ -2634,7 +2645,7 @@ var cls = ( function () {
   }
 
   function isNode(){
-    var result = _isDef(process) && _isDef(module);
+    var result = typeof process !== 'undefined' && typeof module !== 'undefined';
     if(result){
       result = result && _isDef(process.version) && _isDef(module.exports);
       return result;
@@ -2644,27 +2655,67 @@ var cls = ( function () {
   }
 
   __classPath = {};
-  __definedAllClasses = {};
+  __debundledFiles = {};
+  __modules = {};
+
+  cls.loadBundle = function loadBundle(){
+    ajax.get("build.cls").done(function(data){
+      var u8str = LZString.decompressFromUint8Array(data);
+      var obj = JSON.parse(u8str);
+      cls.deBundle(obj);
+    });
+  }
+
+  cls.deBundle = function deBundle(obj){
+    //files are stored as strings so we must evaluate
+    var module={ exports: undefined };
+    forEach(obj,function(content,fileName){
+      eval(content);
+      __modules[ fileName ] = module.exports;
+      if( _isDef(module.exports)){
+        if(_isDef(module.exports.isConstructor)){
+          var className = module.exports.___className;
+          __definedAllClasses[ className ] = module.exports;
+          if( _isDef(window) ){
+            window[className] = module.exports;
+          }
+          if( typeof GLOBAL !== 'undefined' ){
+            GLOBAL[className] = module.exports;
+          }
+        }
+      }
+      module.exports = null;
+    });
+    console.log("debundled",__definedAllClasses);
+  }
 
   cls.require = function clsRequire(path){
 
     if( isNode() ){
       return require(path);
-    }else{//browser
+    }else{
+      // if we are in browser it means that all classes are ready
       var className = classNameFromPath(path);
       return cls.getClass(className);
     }
 
   }
 
-  function buildFile(file){
+  var __builded = {};
+  var __buildString = "";
+  var __buildData;
 
+  function buildFile(file){
+    console.log("Building from file:",file);
+    var fs = require("fs");
+    var fileContent = fs.readFileSync(file,{"encoding":"utf8"});
+    __builded[file] = fileContent;
   }
 
   function buildForBrowser(){
 
     var argv = process.argv;
-    var output = 'build.cls.js';
+    var output = 'build.cls';
     var input = ["public/js/*.cls.js","public/js/**/*.cls.js"];
 
     if( argv.indexOf('-o') >= 0 ){
@@ -2677,9 +2728,18 @@ var cls = ( function () {
 
     var readdir = require("readdir");
     var files = readdir.readSync('./',input);
+
     forEach(files,function(file){
       buildFile(file);
     });
+    __buildString=JSON.stringify(__builded);
+    __buildData = LZString.compressToUint8Array(__buildString);
+    var fs = require("fs");
+    //fs.writeFileSync(output,__buildData,{encoding:null});
+    var fd =  fs.openSync(output, 'w');
+    var buff = new Buffer(__buildData, 'base64');
+    fs.writeSync(fd, buff, 0, buff.length);
+    console.log("Done!");
   }
 
   function parseCommand(){
@@ -2690,14 +2750,104 @@ var cls = ( function () {
     }
   }
 
-  if( isNode() ){
-    if( process.argv.length > 2 ){
-      parseCommand();
+
+
+  // third parties
+
+
+  var ajax = {
+    request: function(ops) {
+        if(typeof ops === 'string') ops = { url: ops };
+        ops.url = ops.url || '';
+        ops.method = ops.method || 'get';
+        ops.data = ops.data || {};
+        var getParams = function(data, url) {
+            var arr = [], str;
+            for(var name in data) {
+                arr.push(name + '=' + encodeURIComponent(data[name]));
+            }
+            str = arr.join('&');
+            if(str !== '') {
+                return url ? (url.indexOf('?') < 0 ? '?' + str : '&' + str) : str;
+            }
+            return '';
+        };
+        var api = {
+            host: {},
+            process: function(ops) {
+                var self = this;
+                this.xhr = null;
+                if(window.ActiveXObject) { this.xhr = new ActiveXObject('Microsoft.XMLHTTP'); }
+                else if(window.XMLHttpRequest) { this.xhr = new XMLHttpRequest(); }
+                if(this.xhr) {
+                    this.xhr.responseType = "arraybuffer";
+                    this.xhr.onreadystatechange = function() {
+                        if(self.xhr.readyState === 4 && self.xhr.status === 200) {
+                          var result = new Uint8Array(self.xhr.response);
+                          self.doneCallback && self.doneCallback.apply(self.host, [result, self.xhr]);
+                        } else if(self.xhr.readyState === 4) {
+                            self.failCallback && self.failCallback.apply(self.host, [self.xhr]);
+                        }
+                        self.alwaysCallback && self.alwaysCallback.apply(self.host, [self.xhr]);
+                    };
+                }
+                if(ops.method === 'get') {
+                    this.xhr.open("GET", ops.url + getParams(ops.data, ops.url), true);
+                } else {
+                    this.xhr.open(ops.method, ops.url, true);
+                    this.setHeaders({
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-type': 'text/plain; charset=x-user-defined'
+                    });
+                }
+                if(ops.headers && typeof ops.headers === 'object') {
+                    this.setHeaders(ops.headers);
+                }
+                setTimeout(function() {
+                    ops.method === 'get' ? self.xhr.send() : self.xhr.send(getParams(ops.data));
+                }, 20);
+                return this;
+            },
+            done: function(callback) {
+                this.doneCallback = callback;
+                return this;
+            },
+            fail: function(callback) {
+                this.failCallback = callback;
+                return this;
+            },
+            always: function(callback) {
+                this.alwaysCallback = callback;
+                return this;
+            },
+            setHeaders: function(headers) {
+                for(var name in headers) {
+                    this.xhr && this.xhr.setRequestHeader(name, headers[name]);
+                }
+            }
+        };
+        return api.process(ops);
+
+    },
+
+    get: function( url, data) {
+        return this.request({
+            url:url,
+            data:data,
+            method:'get'
+        });
+    },
+
+    post: function ( url , data ) {
+        return this.request({
+            url:url,
+            data:data,
+            method:'post'
+        });
     }
   }
 
 
-  // third parties
 
   // Copyright (c) 2013 Pieroxy <pieroxy@pieroxy.net>
   // This work is free. You can redistribute it and/or modify it
@@ -3220,9 +3370,19 @@ var cls = ( function () {
 
 
 
+
+
+
+  if( isNode() ){
+    GLOBAL.cls = cls;
+    if( process.argv.length > 2 ){
+      parseCommand();
+    }
+  }
+
+  if ( isNode() ) {
+    module.exports = cls;
+  }
+
   return cls;
 }() );
-
-if ( typeof module !== 'undefined' ) {
-  module.exports = cls;
-}
