@@ -1,3 +1,4 @@
+"use strict";
 /**
  * cls.js - creating full featured dynamic class system in javascript
  *
@@ -736,11 +737,11 @@ var cls = ( function () {
       staticProp = true;
     }
 
-    methodObj = method.exec( oneCommentBlockStr );
+    var methodObj = method.exec( oneCommentBlockStr );
     //console.log(methodObj);
     if ( _isDef( methodObj ) ) {
 
-      methodName = methodObj[ 1 ];
+      var methodName = methodObj[ 1 ];
 
       if ( !staticProp ) {
         if ( !canOverride( classProperties, methodName, classId ) ) {
@@ -827,8 +828,8 @@ var cls = ( function () {
       propertyName = propertyObj[ 2 ];
 
       if ( !staticProp ) {
-        if ( !canOverride( classProperties, methodName, classId ) ) {
-          throw new Error( "Cannot override '" + methodName + "' property." );
+        if ( !canOverride( classProperties, propertyName, classId ) ) {
+          throw new Error( "Cannot override '" + propertyName + "' property." );
         }
       }
 
@@ -848,7 +849,7 @@ var cls = ( function () {
 
       if ( _isDef( propertyObj[ 3 ] ) ) {
         // declaration is an array 3 and 4['public','final']
-        declarations = [ propertyObj[ 3 ] ];
+        var declarations = [ propertyObj[ 3 ] ];
         if ( _isDef( propertyObj[ 4 ] ) ) {
           declarations.push( propertyObj[ 4 ] );
         }
@@ -1208,7 +1209,7 @@ var cls = ( function () {
     var index = type.declarations.indexOf( declaration );
     return index >= 0;
   };
-  _isType = _typeIs;
+  var _isType = _typeIs;
   /**
    * classInstance constructor - instance is an outside world object
    * @method  clsClassInstance
@@ -1694,15 +1695,15 @@ var cls = ( function () {
       return true;
     }
 
-    valueClassId = instance.getClassId();
+    var valueClassId = instance.getClassId();
 
     // if we inherite from class that we declared everything is ok
-    valueObj = getObject( valueClassId );
-    valueFacade = valueObj.classFacade;
-    valueInherits = valueFacade.inherits;
-    valueClassNames = getClassNamesOf( valueInherits );
+    var valueObj = getObject( valueClassId );
+    var valueFacade = valueObj.classFacade;
+    var valueInherits = valueFacade.inherits;
+    var valueClassNames = getClassNamesOf( valueInherits );
 
-    for ( key in shouldBe ) {
+    for ( var key in shouldBe ) {
       var name = shouldBe[ key ];
       if ( valueClassNames.indexOf( name ) >= 0 ) {
         return true;
@@ -2398,7 +2399,6 @@ var cls = ( function () {
     setObject( classId, result );
 
     classInstance = new clsClassInstance( classId, className );
-    classInstance.constructor.name = className;
     result.classInstance = classInstance;
 
     forEach( classProperties, function ( val, name ) {
@@ -2570,7 +2570,7 @@ var cls = ( function () {
     }
   }
 
-  __definedAllClasses = {};
+  var __definedAllClasses = {};
 
   cls.extend = function extend( firstClass, secondClass ) {
 
@@ -2654,9 +2654,9 @@ var cls = ( function () {
     }
   }
 
-  __classPath = {};
-  __debundledFiles = {};
-  __modules = {};
+  var __classPath = {};
+  var __debundledFiles = {};
+  var __modules = {};
 
   cls.loadBundle = function loadBundle(){
     ajax.get("build.cls").done(function(data){
@@ -2676,7 +2676,7 @@ var cls = ( function () {
         if(_isDef(module.exports.isConstructor)){
           var className = module.exports.___className;
           __definedAllClasses[ className ] = module.exports;
-          if( _isDef(window) ){
+          if( typeof window !== 'undefined' ){
             window[className] = module.exports;
           }
           if( typeof GLOBAL !== 'undefined' ){
