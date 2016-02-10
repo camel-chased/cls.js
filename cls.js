@@ -105,6 +105,8 @@ var cls = ( function () {
     return clone;
   };
 
+  cls["clone"]=_clone;
+
   /**
    * merge two objects recursively
    *
@@ -159,6 +161,7 @@ var cls = ( function () {
     }
   };
 
+  cls["forEach"]=forEach;
   /**
    * freeze objects recuresively
    *
@@ -191,7 +194,7 @@ var cls = ( function () {
   };
 
   /**
-   * guid - generate unique id for classes
+   * guid - generate unique id for classes or something
    *
    * @returns {String}
    */
