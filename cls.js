@@ -137,6 +137,8 @@ var cls = ( function () {
     return obj3;
   };
 
+  cls["merge"]=_merge;
+
   var hasOwn = Object.prototype.hasOwnProperty;
   var toString = Object.prototype.toString;
 
