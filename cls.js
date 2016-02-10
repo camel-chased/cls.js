@@ -702,9 +702,9 @@ var cls = ( function () {
   };
 
   var COMMENT_BLOCK = '\\/\\*\\*?\\s*([^\\/]+)';
-  var METHOD_REG = '^\\s?\\@method[ \\t]+([^\\s]+)[ \\t]*(?:([^\\n \\t]+))?(?:[ \\t]+([^\\n]+))?\\s?$';
+  var METHOD_REG = '^\\s?\\@method[ \\t]+([^\\s]+)[ \\t]*(?:([^\\n\\r \\t]+))?(?:[ \\t]+([^\\n\\r]+))?\\s?$';
   var PROPERTY_REG =
-    '^\\s?\\@property[ \\t]+\\{([^\\}]+)\\}[ \\t]+([^ \\t\\r\\n]+)[ \\t]*([^\\s\\*\\/]+)?(?:[ \\t]+([^\\n\\/]+))?$';
+    '^\\s?\\@property[ \\t]+\\{([^\\}]+)\\}[ \\t]+([^ \\t\\r\\n]+)[ \\t]*([^\\s\\*\\/]+)?(?:[ \\t]+([^\\n\\r\\/]+))?$';
   var RETURNS_REG = '^\\@returns?\[ \\t]+\\{([^\\}]+)\\}';
   var STATIC_METHOD_PROPERTY = '^\\s?\\@(method|property)[ \\t]+(?:\\{.*\\})?[ \\t]?(.*)(?:static)';
   var METHOD_PROPERTY =
@@ -2294,13 +2294,6 @@ var cls = ( function () {
 
     __definedClasses[ className ] = constructor;
 
-    if( typeof window !=='undefined'){
-      window[className] = constructor;
-    }
-    if( typeof GLOBAL !== 'undefined'){
-      GLOBAL[className] = constructor;
-    }
-
     return constructor;
   }
 
@@ -2669,19 +2662,26 @@ var cls = ( function () {
   var __debundledFiles = {};
   var __modules = {};
 
-  cls["loadBundle"] = function loadBundle(){
+  cls["loadBundle"] = function loadBundle(fn){
     ajax.get("build.cls").done(function(data){
       var u8str = LZString.decompressFromUint8Array(data);
       var obj = JSON.parse(u8str);
-      cls.deBundle(obj);
+      cls.deBundle(obj,fn);
     });
   }
 
-  cls["deBundle"] = function deBundle(obj){
+  cls["deBundle"] = function deBundle(obj,fn){
     forEach(obj,function(content,fileName){
       var exprt = content.replace("module.exports","cls.module.exports");
       cls['module'] = { 'exports': undefined };
-      eval(exprt);
+      var main;
+      if( typeof window !== 'undefined'){
+        main = window;
+      }
+      if( typeof GLOBAL !== 'undefined'){
+        main = GLOBAL;
+      }
+      eval.call(main,exprt);
       __modules[ fileName ] = cls.module.exports;
       if( _isDef(cls.module.exports)){
         if(_isDef(cls.module.exports.isConstructor)){
@@ -2696,7 +2696,8 @@ var cls = ( function () {
         }
       }
     });
-    console.log("debundled",__definedAllClasses);
+
+    fn(__definedAllClasses);
   }
 
   cls["require"] = function clsRequire(path){
@@ -2722,12 +2723,13 @@ var cls = ( function () {
     __builded[file] = fileContent;
   }
 
-  function buildForBrowser(){
-
+  function buildForBrowser(inpt){
     var argv = process.argv;
     var output = 'build.cls';
     var input = ["public/js/*.cls.js","public/js/**/*.cls.js"];
-
+    if(_isDef(inpt)){
+      input = inpt;
+    }
     if( argv.indexOf('-o') >= 0 ){
       output = argv[ argv.indexOf('-o')+1 ];
     }
@@ -2752,10 +2754,28 @@ var cls = ( function () {
     console.log("Done!");
   }
 
+  function watchFiles(){
+
+    var argv = process.argv;
+    var input = "public/js/**/*.cls.js";
+    if( argv.indexOf('-f') >= 0 ){
+      input = argv[ argv.indexOf('-f')+1 ];
+    }
+    console.log("Watching files...",input);
+    var watch = require('node-watch');
+    var path=require('path');
+    var dir = path.dirname(input);
+    watch(dir, function(filename) {
+      console.log(filename, ' changed... rebuilding...');
+      buildForBrowser([input]);
+    });
+  }
+
   function parseCommand(){
     var command = process.argv[2];
     switch (command) {
       case "build":buildForBrowser();break;
+      case "watch":watchFiles();break;
       default:
     }
   }
@@ -2763,7 +2783,32 @@ var cls = ( function () {
 
 
   // third parties
-
+  /**
+   * find closest element like jquery.closest
+   * @param  {[type]} el       [description]
+   * @param  {[type]} selector [description]
+   * @return {[type]}          [description]
+   */
+  cls["closest"]=function closest(el, selector) {
+    var matchesFn;
+    // find vendor prefix
+    ['matches','webkitMatchesSelector','mozMatchesSelector','msMatchesSelector','oMatchesSelector'].some(function(fn) {
+        if (typeof document.body[fn] == 'function') {
+            matchesFn = fn;
+            return true;
+        }
+        return false;
+    })
+    // traverse parents
+    while (el!==null) {
+        parent = el.parentElement;
+        if (parent!==null && parent[matchesFn](selector)) {
+            return parent;
+        }
+        el = parent;
+    }
+    return null;
+  }
 
   var ajax = {
     request: function(ops) {
@@ -3378,9 +3423,55 @@ var cls = ( function () {
     return LZString;
   } )();
 
+  ( function ( funcName, baseObj ) {
+    funcName = funcName || "docReady";
+    baseObj = baseObj || window;
+    var readyList = [];
+    var readyFired = false;
+    var readyEventHandlersInstalled = false;
 
+    function ready() {
+      if ( !readyFired ) {
+          readyFired = true;
+        for ( var i = 0; i < readyList.length; i++ ) {
+          readyList[ i ].fn.call( window, readyList[ i ].ctx );
+        }
+        readyList = [];
+      }
+    }
 
+    function readyStateChange() {
+      if ( document.readyState === "complete" ) {
+        ready();
+      }
+    }
 
+    baseObj[ funcName ] = function ( callback, context ) {
+      if ( readyFired ) {
+        setTimeout( function () {
+          callback( context );
+        }, 1 );
+        return;
+      } else {
+        readyList.push( {
+          fn: callback,
+          ctx: context
+        } );
+      }
+      if ( document.readyState === "complete" ) {
+        setTimeout( ready, 1 );
+      } else if ( !readyEventHandlersInstalled ) {
+        if ( document.addEventListener ) {
+          document.addEventListener( "DOMContentLoaded", ready, false );
+          window.addEventListener( "load", ready, false );
+        } else {
+          document.attachEvent( "onreadystatechange", readyStateChange );
+          window.attachEvent( "onload", ready );
+        }
+        readyEventHandlersInstalled = true;
+      }
+    }
+  } )( "docReady", cls );
 
 
   if( isNode() ){
