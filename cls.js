@@ -2815,6 +2815,28 @@ var cls = ( function () {
     return null;
   }
 
+  function Xhr(){ /* returns cross-browser XMLHttpRequest, or null if unable */
+      try {
+          return new XMLHttpRequest();
+      }catch(e){}
+      try {
+          return new ActiveXObject("Msxml3.XMLHTTP");
+      }catch(e){}
+      try {
+          return new ActiveXObject("Msxml2.XMLHTTP.6.0");
+      }catch(e){}
+      try {
+          return new ActiveXObject("Msxml2.XMLHTTP.3.0");
+      }catch(e){}
+      try {
+          return new ActiveXObject("Msxml2.XMLHTTP");
+      }catch(e){}
+      try {
+          return new ActiveXObject("Microsoft.XMLHTTP");
+      }catch(e){}
+      return null;
+  }
+
   var ajax = {
     request: function(ops) {
         if(typeof ops === 'string') ops = { url: ops };
@@ -2836,21 +2858,8 @@ var cls = ( function () {
             host: {},
             process: function(ops) {
                 var self = this;
-                this.xhr = null;
-                if(window.ActiveXObject) { this.xhr = new ActiveXObject('Microsoft.XMLHTTP'); }
-                else if(window.XMLHttpRequest) { this.xhr = new XMLHttpRequest(); }
-                if(this.xhr) {
-                    this.xhr.responseType = "arraybuffer";
-                    this.xhr.onreadystatechange = function() {
-                        if(self.xhr.readyState === 4 && self.xhr.status === 200) {
-                          var result = new Uint8Array(self.xhr.response);
-                          self.doneCallback && self.doneCallback.apply(self.host, [result, self.xhr]);
-                        } else if(self.xhr.readyState === 4) {
-                            self.failCallback && self.failCallback.apply(self.host, [self.xhr]);
-                        }
-                        self.alwaysCallback && self.alwaysCallback.apply(self.host, [self.xhr]);
-                    };
-                }
+                self.xhr = null;
+                self.xhr=Xhr();
                 if(ops.method === 'get') {
                     this.xhr.open("GET", ops.url + getParams(ops.data, ops.url), true);
                 } else {
@@ -2863,6 +2872,17 @@ var cls = ( function () {
                 if(ops.headers && typeof ops.headers === 'object') {
                     this.setHeaders(ops.headers);
                 }
+                self.xhr.responseType = "arraybuffer";
+                self.xhr.overrideMimeType('text/plain; charset=x-user-defined');
+                self.xhr.onreadystatechange = function() {
+                    if(self.xhr.readyState === 4 && self.xhr.status === 200) {
+                      var result = new Uint8Array(self.xhr.response);
+                      self.doneCallback && self.doneCallback.apply(self.host, [result, self.xhr]);
+                    } else if(self.xhr.readyState === 4) {
+                        self.failCallback && self.failCallback.apply(self.host, [self.xhr]);
+                    }
+                    self.alwaysCallback && self.alwaysCallback.apply(self.host, [self.xhr]);
+                };
                 setTimeout(function() {
                     ops.method === 'get' ? self.xhr.send() : self.xhr.send(getParams(ops.data));
                 }, 20);
