@@ -767,6 +767,7 @@ var cls = ( function () {
       if ( _isDef( classId ) ) {
         blocks[ methodName ].classId = classId;
       }
+      //console.log("defining",methodName,"for",className);
       blocks[ methodName ].className = className;
       blocks[ methodName ].value = obj[ methodName ];
       // ---------------- IMPORTANT ------------------
@@ -1035,6 +1036,8 @@ var cls = ( function () {
         }
       }
 
+      if ( !_isDef( data.overridedBy )) data.overridedBy=[];
+
     } else {
       throw new Error( "Cannot create property from empty object." );
     }
@@ -1058,6 +1061,7 @@ var cls = ( function () {
     if ( !_isDef( data.classId ) ) data.classId = classId;
     if ( !_isDef( data.value ) ) data.value = value;
     if ( _isDef( declarations ) ) data.declarations = declarations;
+    if ( !_isDef( data.overridedBy )) data.overridedBy=[];
     checkClassProperty( data, className, name );
     //only if there is no value already
     if ( !_isDef( classProperties[ name ] ) ) classProperties[ name ] = data;
@@ -1097,6 +1101,8 @@ var cls = ( function () {
       } else {
         if ( canOverride( classProperties, name, classId ) ) {
           classProperties[ name ].value = value;
+          // jezeli robimy overrida musimy to zapisac zeby pozniej wywolac facade overridujaca
+          classProperties[ name ].overridedBy.push(classId);
         }
       }
     } );
@@ -1563,6 +1569,20 @@ var cls = ( function () {
     return obj.classFacade.getCurrentClassName();
   }
 
+  /**
+   * Sprawdza czy podany classId rozszeza klase z ktorej pochodzi zmienna
+   * @param  {[type]}  classId [description]
+   * @param   {string}  propertyName
+   * @return {Boolean}         [description]
+   */
+  clsClassData.prototype.isMyChild = function ( classId, propertyName ){
+
+    var facade = this.classFacades[ classId ];
+    var property = this.classProperties[ propertyName ];
+
+    return facade.inherits.indexOf(property.classId)>=0;
+
+  }
 
 
   /**
@@ -1572,12 +1592,16 @@ var cls = ( function () {
    * and is binding right facade to it if it can
    * @method  get
    * @param   {[type]} classId [description]
-   * @param   {[type]} className [description]
    * @param   {[type]} propertyName [description]
+   * @param   {boolean} fromOverride zabezpieczenie przed infinite loop jezeli byl override
    * @returns {[type]} [description]
    */
-  clsClassData.prototype.get = function get( classId, propertyName ) {
+  clsClassData.prototype.get = function get( classId, propertyName, fromOverride ) {
 
+    if(!_isDef(fromOverride))fromOverride=false;
+    //console.log("fromOverride?",classId,fromOverride);
+
+    var facade;
     function preMethod() {
       var _args = arguments;
       _args = checkMethodArgTypes( obj, propertyName, _args );
@@ -1591,18 +1615,35 @@ var cls = ( function () {
       throw new Error( "There is no property like " + propertyName + " in " + className );
     }
     var property = this.classProperties[ propertyName ];
-    //console.log('getting', propertyName, 'from', className, classId,property.declarations);
-
+    //console.log('getting', propertyName, 'from', className, classId,property);
     if ( _isDef( property ) ) {
 
-      // this is only way to get real data
+      // jezeli nie wywolalismy wczesniej siebie sami z overridem mozemy to zrobic raz
+      if ( property.overridedBy.length>0 && !fromOverride){
+        // property was overrided
+        // bierzemy ostatni override i uruchamiamy z tą fasadą
+        var lastOverride = property.overridedBy[ property.overridedBy.length-1 ];
+        var child=this.isMyChild(lastOverride,propertyName);
+        //console.log("child?",lastOverride,"of",classId,child);
+        // jezeli rozszeza nas moze miec dostep do danych
+        if ( _type( property.value ) === 'function' ) {
+
+          facade = this.classFacades[ lastOverride ];
+          var obj = getObject( classId );
+          return preMethod;
+        } else {
+          return property.value;
+        }
+
+      }else
+
       if ( property.classId === classId ) {
 
         //console.log(className, 'is owner of', propertyName, 'property of type', _type(result.value));
         // if its mine property i can get it no matter what
         if ( _type( property.value ) === 'function' ) {
 
-          var facade = this.classFacades[ classId ];
+          facade = this.classFacades[ classId ];
           var obj = getObject( classId );
           //return result.value.bind(facade);
 
@@ -1620,7 +1661,7 @@ var cls = ( function () {
         // private of parents but i cannot access it directly
         var targetName = getName( property.classId );
         //console.log('redirecting to', targetName, result.classId, 'who has this property', propertyName);
-        return this.get( property.classId, propertyName );
+        return this.get( property.classId, propertyName,fromOverride );
 
       } else if ( _isDef( classId ) &&
         _typeIs( property, 'protected' ) &&
@@ -1631,10 +1672,9 @@ var cls = ( function () {
         // access it becase i'm neighbor or child
         var targetName = getName( property.classId );
         //console.log(targetName, 'is mixed with or child of', className);
-        return this.get( property.classId, propertyName );
+        return this.get( property.classId, propertyName,fromOverride );
 
-
-      } else if ( _isDef( classId ) && _typeIs( property, 'private' ) ) {
+      }else if ( _isDef( classId ) && _typeIs( property, 'private' ) ) {
 
         //console.log('classId:', classId, 'result.classId:', result.classId);
         //console.log('this facade', classId);
