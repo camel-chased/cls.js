@@ -195,6 +195,8 @@ var cls = ( function () {
     return typeof val !== 'undefined' && val !== null;
   };
 
+  cls["isDef"]=_isDef;
+  
   /**
    * guid - generate unique id for classes or something
    *
