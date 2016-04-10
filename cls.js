@@ -196,7 +196,7 @@ var cls = ( function () {
   };
 
   cls["isDef"]=_isDef;
-  
+
   /**
    * guid - generate unique id for classes or something
    *
@@ -1662,7 +1662,7 @@ var cls = ( function () {
         // binding to myself because i should have all properties even
         // private of parents but i cannot access it directly
         var targetName = getName( property.classId );
-        //console.log('redirecting to', targetName, result.classId, 'who has this property', propertyName);
+        //console.log('redirecting to', targetName, fromOverride, 'who has this property', propertyName);
         return this.get( property.classId, propertyName,fromOverride );
 
       } else if ( _isDef( classId ) &&
@@ -2191,6 +2191,9 @@ var cls = ( function () {
     }else{return false;}
   }
 
+
+
+
   /**
    * convert class to object representation
    * @method  toObject
@@ -2323,13 +2326,13 @@ var cls = ( function () {
     rget( constructor, '___arguments', arguments );
     rget( constructor, 'isConstructor', true );
     rget( constructor, 'extend', constructorExtend.bind( constructor ) );
+    rget( constructor, 'mix', constructorMix.bind( constructor ) );
     rwget( constructor, 'compressed', '' );
     rget( constructor, 'compress', compress.bind( constructor ) );
     rget( constructor, 'asObject', asObject.bind( constructor ) );
     rget( constructor, 'asString', asString.bind( constructor ) );
     rget( constructor, 'saveAsObject', saveAsObject.bind( constructor ) );
     //rget( constructor, 'decompress', decompress.bind( constructor ) );
-
     if( sourceType === 'function' ){
       var staticProps = parseComments( sourceObject, className, STATIC_METHOD_PROPERTY );
     }else{
@@ -2441,6 +2444,7 @@ var cls = ( function () {
     classFacade.parentName = '';
     classFacade.inherits = [];
     classFacade.child = '';
+    classFacade.mixedWith = [];
 
     result.classId = classId;
     result.classProperties = classProperties;
@@ -2553,15 +2557,20 @@ var cls = ( function () {
 
     if ( firstClass.___type === 'class' ) { //simple class
       firstClassInstance = _create( firstClass.___className, firstClass, classProperties, classData );
-    } else { //extended class
+    } else if (firstClass.___type === "extend"){ //extended class
       firstClassInstance = _extend( firstClass.___firstClass, firstClass.___secondClass, classProperties, classData );
+    }else if(firstClass.___type === "mix"){
+      firstClassInstance = _mix( firstClass.___firstClass, firstClass.___secondClass, classProperties, classData );
     }
     firstClassFacade = getFacadeOfInstance( firstClassInstance );
 
     if ( secondClass.___type === 'class' ) { //simple class
       secondClassInstance = _create( secondClass.___className, secondClass, classProperties, classData );
-    } else { //extended class
+    } else if(secondClass.___type === "extend" ) { //extended class
       secondClassInstance = _extend( secondClass.___firstClass, secondClass.___secondClass, classProperties,
+        classData );
+    }else if(secondClass.___type === "mix" ) { //extended class
+      secondClassInstance = _mix( secondClass.___firstClass, secondClass.___secondClass, classProperties,
         classData );
     }
 
@@ -2601,6 +2610,7 @@ var cls = ( function () {
   };
 
 
+
   function arrayExtend( array ) {
     var result = array[ 0 ];
     forEach( array, function ( val, i ) {
@@ -2611,6 +2621,14 @@ var cls = ( function () {
     return result;
   }
 
+  function constructorMix(className,source){
+    if ( _type( className ) === 'string' ) {
+      var nextClass = cls.class( className, source );
+      return cls.mix( this, nextClass );
+    } else {
+      return cls.mix( this, className ); //className is cls.class already
+    }
+  }
 
   function constructorExtend( className, source ) {
     if ( _type( className ) === 'string' ) {
@@ -2654,6 +2672,7 @@ var cls = ( function () {
     rget( constructor, '___className', secondClass.___className );
     rget( constructor, 'isConstructor', true );
     rget( constructor, 'extend', constructorExtend.bind( constructor ) );
+    rget( constructor, 'mix', constructorMix.bind( constructor ) );
     rwget( constructor, 'compressed', '' );
     rget( constructor, 'compress', compress.bind( constructor ) );
     rget( constructor, 'asObject', asObject.bind( constructor ) );
@@ -2670,6 +2689,145 @@ var cls = ( function () {
     return constructor;
   }
 
+  function arrayMix( array ) {
+    var result = array[ 0 ];
+    forEach( array, function ( val, i ) {
+      if ( i > 0 ) {
+        result = cls.mix( result, val );
+      }
+    } );
+    return result;
+  }
+
+  function _mix( firstClass, secondClass, classProperties, classData ) {
+
+    var args = Array.prototype.slice.call( arguments ),
+      classes = [],
+      instances = [],
+      instance = {},
+      classId = '',
+      classObjects = {},
+      classFacade = {},
+      secondClassInstance = {},
+      secondClassFacade = {},
+      secondClassObject = {},
+      firstClassInstance = {},
+      firstClassFacade = {},
+      mixedWith = [];
+
+    if ( !_isDef( classProperties ) ) {
+      classProperties = new clsClassProperties();
+      classData = new clsClassData( classProperties );
+    }
+
+    if ( firstClass.___type === 'class' ) { //simple class
+      firstClassInstance = _create( firstClass.___className, firstClass, classProperties, classData );
+    } else if (firstClass.___type === "extend"){ //extended class
+      firstClassInstance = _extend( firstClass.___firstClass, firstClass.___secondClass, classProperties, classData );
+    }else if(firstClass.___type === "mix"){
+      firstClassInstance = _mix( firstClass.___firstClass, firstClass.___secondClass, classProperties, classData );
+    }
+    firstClassFacade = getFacadeOfInstance( firstClassInstance );
+
+    if ( secondClass.___type === 'class' ) { //simple class
+      secondClassInstance = _create( secondClass.___className, secondClass, classProperties, classData );
+    } else if(secondClass.___type === "extend" ) { //extended class
+      secondClassInstance = _extend( secondClass.___firstClass, secondClass.___secondClass, classProperties,
+        classData );
+    }else if(secondClass.___type === "mix" ) { //extended class
+      secondClassInstance = _mix( secondClass.___firstClass, secondClass.___secondClass, classProperties,
+        classData );
+    }
+
+
+    secondClassObject = __allClasses[ secondClassInstance.getClassId() ];
+    secondClassFacade = secondClassObject.classFacade;
+
+
+    //classProperties = secondClassObject.classProperties;
+    //classData = secondClassObject.classData;
+
+    // last one is one that we are extending
+    var secondClassId = secondClassInstance.getClassId();
+    var firstClassId = firstClassInstance.getClassId();
+
+    secondClassFacade.extend = '';
+    secondClassFacade.parent = firstClassInstance.getClassId();
+    secondClassFacade.parentName = firstClassInstance.getCurrentClassName();
+    secondClassFacade.inherits = '';
+    secondClassFacade.child = '';
+    var childId = secondClassFacade.getClassId();
+    firstClassFacade.child = '';
+    secondClassFacade.mixedWith.push( firstClassId );
+    firstClassFacade.mixedWith.push( secondClassId );
+
+    secondClassInstance.mixedWith.push(firstClassId);
+    firstClassInstance.mixedWith.push(secondClassId);
+
+    // in mix style we add properties to first and second facade/instance
+    forEach( classProperties, function ( val, key ) {
+      if ( val.classId !== secondClassId ) {
+        secondClassFacade.___addProperty( key, val, false );
+        if ( _typeIs( val, 'public' ) ) {
+          secondClassInstance.___addPublicProperty( key );
+        }
+      }else{
+        firstClassFacade.___addProperty(key,val,false);
+        if ( _typeIs( val, 'public' ) ) {
+          firstClassInstance.___addPublicProperty( key );
+        }
+      }
+    } );
+
+    return secondClassInstance;
+  };
+
+  cls["mix"] = function mix( firstClass, secondClass ) {
+
+    if ( _type( firstClass ) === 'array' ) {
+      return arrayMix( firstClass );
+    }
+
+    var _args = Array.prototype.slice.call( arguments );
+    if ( _args.length > 2 ) {
+      return arrayMix( _args );
+    }
+
+    var constructor = function classConstructor() {
+      var args = arguments;
+      var instance = _mix( firstClass, secondClass );
+      var result = fireConstructor( instance, args );
+      if ( _type( result ) === 'undefined' ) {
+        return instance;
+      } else {
+        return result;
+      }
+    }
+
+    // if we want another extend we must have source for creation purpose
+    rget( constructor, '___firstClass', firstClass );
+    rget( constructor, '___secondClass', secondClass );
+    rget( constructor, '___arguments', arguments );
+    rget( constructor, '___type', 'mix' );
+    rget( constructor, '___className', secondClass.___className );
+    rget( constructor, 'isConstructor', true );
+    rget( constructor, 'extend', constructorExtend.bind( constructor ) );
+    rget( constructor, 'mix', constructorMix.bind( constructor ) );
+    rwget( constructor, 'compressed', '' );
+    rget( constructor, 'compress', compress.bind( constructor ) );
+    rget( constructor, 'asObject', asObject.bind( constructor ) );
+    rget( constructor, 'asString', asString.bind( constructor ) );
+    rget( constructor, 'saveAsObject', saveAsObject.bind( constructor ) );
+    //rget( constructor, 'decompress', decompress.bind( constructor ) );
+
+    var staticProps = _merge( firstClass.___static, secondClass.___static );
+    rget( constructor, '___static', staticProps );
+    resolveStatic( staticProps, constructor );
+
+    __definedAllClasses[ secondClass.___className ] = constructor;
+
+    return constructor;
+  }
 
   cls["empty"] = function empty( className ) {
     return cls.class( className, function () {
