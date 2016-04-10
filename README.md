@@ -169,6 +169,12 @@ var Ext_instance = new Ext_;
 ### Mix-in
 
 ```javascript
+
+var mixedClass = cls.mix(firstClass,secondClass);
+
+var mixedClass2 = firstClass.mix(secondClass);
+
+// OR WITH OBJECT IN RUNTIME
 var dynamo = {
 
   'someOtherMethod':{
@@ -186,6 +192,11 @@ var dynamo = {
 // the "mix" method is declared in MyClass
 myInstance.mix(dynamo);
 myInstance.someOtherMethod(); //"this method is added at runtime"
+
+// you can get object of class with YourClass.asObject();
+var dynamoObject = DynamoClass.asObject();
+myInstance.mix(dynamoObject);
+
 ```
 
 ### Factories
