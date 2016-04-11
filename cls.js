@@ -288,24 +288,24 @@ var cls = ( function () {
    */
   function generateArgumentTypes( classType ) {
 
-    var params = /^\s?\@param\s+\{([^\}]+)\}\s([a-z0-9\_\$]+)\s?(?:\=\s?([^\n]+))?\s?$/gim,
+    var params = /^(\s+)?\@param\s+\{([^\}]+)\}\s+([a-z0-9\_\$]+)\s+?(?:\=\s?([^\n]+))?(\s+)?$/gim,
       tmp = params.exec( classType.str ),
       paramDef = {};
     classType.arguments = [];
-
+    console.log("tmp",tmp,classType);
     if ( _isDef( tmp ) ) {
 
-      if ( tmp.length < 3 ) {
+      if ( tmp.length < 4 ) {
         throw new Error( "Variable declaration is incorrect." );
       }
-      if ( _isDef( tmp[ 1 ] ) && _isDef( tmp[ 2 ] ) ) {
+      if ( _isDef( tmp[ 2 ] ) && _isDef( tmp[ 3 ] ) ) {
 
         paramDef = {
-          types: tmp[ 1 ].split( '|' ),
-          name: tmp[ 2 ]
+          types: tmp[ 2 ].split( '|' ),
+          name: tmp[ 3 ]
         };
-        if ( _isDef( tmp[ 3 ] ) ) {
-          paramDef.default = convertParamDefault( tmp[ 1 ].split( '|' ), tmp[ 3 ] );
+        if ( _isDef( tmp[ 4 ] ) ) {
+          paramDef.default = convertParamDefault( tmp[ 3 ].split( '|' ), tmp[ 4 ] );
         }
 
         classType.arguments.push( paramDef );
