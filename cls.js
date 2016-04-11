@@ -292,7 +292,7 @@ var cls = ( function () {
       tmp = params.exec( classType.str ),
       paramDef = {};
     classType.arguments = [];
-    console.log("tmp",tmp,classType);
+
     if ( _isDef( tmp ) ) {
 
       if ( tmp.length < 4 ) {
